@@ -1,0 +1,2146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#7ED957">
+<title>阳光花园守护计划</title>
+<script src="https://cdn.jsdelivr.net/npm/twemoji@14/dist/twemoji.min.js" crossorigin="anonymous"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --green: #7ED957;
+    --green-d: #5BB73A;
+    --green-l: #B8E89A;
+    --sun: #FFD93D;
+    --sun-d: #F4B400;
+    --orange: #FF8C42;
+    --pink: #FF6B9D;
+    --blue: #4FC3F7;
+    --purple: #B388FF;
+    --red: #FF5252;
+    --bg: #E8F5E9;
+    --card: #FFFFFF;
+    --text: #2E3A2F;
+    --text-l: #6B7B6D;
+    --shadow: 0 4px 16px rgba(46, 58, 47, 0.12);
+    --shadow-l: 0 2px 8px rgba(46, 58, 47, 0.08);
+    --radius: 16px;
+    --radius-s: 10px;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  html, body {
+    height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+    user-select: none;
+  }
+  body { display: flex; flex-direction: column; }
+
+  /* 顶部栏 */
+  .topbar {
+    flex-shrink: 0;
+    background: linear-gradient(135deg, var(--green) 0%, var(--green-d) 100%);
+    color: #fff;
+    padding: calc(var(--safe-top) + 10px) 16px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 8px rgba(91, 183, 58, 0.3);
+    z-index: 10;
+  }
+  .topbar .title { font-size: 17px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+  .topbar .role-switch {
+    background: rgba(255,255,255,0.25);
+    border: none;
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .topbar .sun-meter {
+    display: flex; align-items: center; gap: 4px;
+    background: rgba(255,255,255,0.25);
+    padding: 4px 10px; border-radius: 20px;
+    font-size: 13px; font-weight: 700;
+  }
+
+  /* 主内容区 */
+  .main {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    padding: 12px 12px 80px;
+  }
+  .main::-webkit-scrollbar { display: none; }
+
+  .view { display: none; animation: fadeIn 0.3s ease; }
+  .view.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* 卡片 */
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 14px;
+    margin-bottom: 12px;
+    box-shadow: var(--shadow-l);
+  }
+  .card-title {
+    font-size: 15px; font-weight: 700; margin-bottom: 10px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .card-title .ico { font-size: 18px; }
+
+  /* 花园 */
+  .garden-scene {
+    background: linear-gradient(180deg, #B3E5FC 0%, #C8E6C9 45%, #8D6E63 100%);
+    border-radius: var(--radius);
+    padding: 16px 12px;
+    min-height: 280px;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+  .garden-scene .sky-sun {
+    position: absolute; top: 12px; right: 16px;
+    font-size: 36px;
+    animation: spin 20s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .garden-scene .cloud {
+    position: absolute; top: 20px; left: 20px;
+    font-size: 28px; opacity: 0.8;
+    animation: float 6s ease-in-out infinite;
+  }
+  @keyframes float { 0%,100% { transform: translateX(0); } 50% { transform: translateX(20px); } }
+
+  /* 草坪行 */
+  .lawn {
+    position: absolute; bottom: 28px; left: 0; right: 0; height: 120px;
+    display: flex; flex-direction: column; justify-content: flex-end;
+  }
+  .lawn-lane {
+    flex: 1; position: relative;
+    border-bottom: 1px dashed rgba(255,255,255,0.12);
+  }
+  .lawn-lane:last-child { border-bottom: none; }
+
+  /* 植物 */
+  .plants-row {
+    position: absolute; bottom: 28px; left: 0; right: 0;
+    display: flex; justify-content: flex-end; align-items: flex-end;
+    gap: 2px; padding: 0 8px;
+    pointer-events: none;
+  }
+  .plant-item {
+    font-size: 34px; text-align: center;
+    cursor: pointer;
+    position: relative;
+    animation: plantBob 2s ease-in-out infinite;
+    transition: opacity 0.4s, transform 0.3s;
+    pointer-events: auto;
+    z-index: 3;
+  }
+  .plant-item:active { transform: scale(1.2); }
+  .plant-item:nth-child(even) { animation-delay: 0.5s; }
+  .plant-item .label { font-size: 8px; color: #fff; background: rgba(0,0,0,0.45); border-radius: 4px; padding: 1px 4px; display: block; margin-top: 2px; }
+  .plant-item.eaten { animation: plantEaten 0.6s forwards; }
+  @keyframes plantBob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+  @keyframes plantEaten {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(0.7) rotate(-15deg); opacity: 0.5; filter: hue-rotate(30deg); }
+    100% { transform: scale(0.3) translateY(20px); opacity: 0; }
+  }
+
+  /* ============ 卡通僵尸 ============ */
+  .zombie {
+    position: absolute; bottom: 4px;
+    z-index: 4;
+    width: 30px; height: 42px;
+    transition: left 0.3s ease-out;
+    animation: zombieBob 0.7s ease-in-out infinite alternate;
+  }
+  @keyframes zombieBob {
+    from { transform: translateY(0); }
+    to { transform: translateY(-4px); }
+  }
+  /* 僵尸头部 */
+  .z-head {
+    width: 24px; height: 26px; margin: 0 auto;
+    background: radial-gradient(circle at 40% 35%, #9CCC65, #7CB342 60%, #558B2F);
+    border-radius: 50% 50% 40% 40%;
+    position: relative;
+    box-shadow: inset 0 -4px 6px rgba(0,0,0,0.2);
+  }
+  /* 眼睛 */
+  .z-eye {
+    position: absolute; width: 7px; height: 8px; background: #fff;
+    border-radius: 50%; top: 8px;
+  }
+  .z-eye::after {
+    content:''; position: absolute; width: 3px; height: 3px;
+    background: #1B1B1B; border-radius: 50%; top: 3px; left: 2px;
+  }
+  .z-eye.left { left: 4px; width: 8px; height: 9px; }
+  .z-eye.right { right: 4px; width: 5px; height: 6px; top: 9px; }
+  /* 嘴 */
+  .z-mouth {
+    position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%);
+    width: 8px; height: 3px; background: #33691E;
+    border-radius: 0 0 3px 3px;
+  }
+  /* 身体 */
+  .z-body {
+    width: 20px; height: 18px; margin: 0 auto;
+    background: linear-gradient(180deg, #795548 0%, #6D4C41 40%, #5D4037 60%, #4E342E 100%);
+    border-radius: 4px 4px 0 0;
+    position: relative;
+  }
+  .z-body::after {
+    content:''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 0; height: 0;
+    border-left: 4px solid transparent; border-right: 4px solid transparent;
+    border-top: 4px solid #3E2723;
+  }
+  /* 手臂 */
+  .z-arm {
+    position: absolute; top: 30px; width: 7px; height: 16px;
+    background: linear-gradient(180deg, #7CB342, #558B2F);
+    border-radius: 3px;
+    transform-origin: top center;
+  }
+  .z-arm.left {
+    left: 2px;
+    animation: armSwingL 1.4s ease-in-out infinite;
+  }
+  .z-arm.right {
+    right: 2px;
+    animation: armSwingR 1.4s ease-in-out infinite;
+  }
+  @keyframes armSwingL {
+    0%,100% { transform: rotate(-20deg); }
+    50% { transform: rotate(30deg); }
+  }
+  @keyframes armSwingR {
+    0%,100% { transform: rotate(20deg); }
+    50% { transform: rotate(-30deg); }
+  }
+  /* 手 */
+  .z-hand {
+    width: 6px; height: 5px; background: #9CCC65;
+    border-radius: 50%; position: absolute; bottom: -2px; left: 0;
+  }
+  /* 腿 */
+  .z-leg {
+    position: absolute; bottom: 0; width: 7px; height: 12px;
+    background: linear-gradient(180deg, #4E342E, #3E2723);
+    border-radius: 0 0 3px 3px;
+    transform-origin: top center;
+  }
+  .z-leg.left {
+    left: 8px;
+    animation: legWalk 0.7s ease-in-out infinite;
+  }
+  .z-leg.right {
+    right: 8px;
+    animation: legWalk 0.7s ease-in-out infinite 0.35s;
+  }
+  @keyframes legWalk {
+    0%,100% { transform: rotate(-10deg); }
+    50% { transform: rotate(10deg); }
+  }
+
+  /* 僵尸受击 */
+  .zombie.hit { filter: brightness(2); }
+  .zombie.hit .z-head { background: #FFF; }
+  .zombie.hit .z-eye { background: #FF5252; }
+
+  /* 僵尸被击败（倒地） */
+  .zombie.defeated { animation: zombieDefeat 0.7s forwards; }
+  @keyframes zombieDefeat {
+    0% { opacity: 1; transform: rotate(0) translateY(0); }
+    40% { opacity: 0.8; transform: rotate(-70deg) translateY(10px); filter: grayscale(0.5); }
+    100% { opacity: 0; transform: rotate(-90deg) translateY(30px) scale(0.5); }
+  }
+  /* 僵尸被击飞（阳光炮弹命中） */
+  .zombie.knockback {
+    animation: zombieKnockback 0.6s forwards !important;
+  }
+  @keyframes zombieKnockback {
+    0% { transform: translateX(0) translateY(0) rotate(0); filter: brightness(3); }
+    20% { transform: translateX(20px) translateY(-25px) rotate(25deg); filter: brightness(5); }
+    40% { transform: translateX(35px) translateY(-10px) rotate(-20deg); filter: brightness(2); }
+    100% { transform: translateX(60px) translateY(40px) rotate(-100deg) scale(0.2); opacity: 0; }
+  }
+
+  /* 植物发射光晕（保留但不再使用） */
+  .plant-item.shooting::after {
+    content: ''; position: absolute; top: 30%; left: 70%;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(165,214,167,0.8), transparent);
+    animation: shoot 0.3s ease-out;
+  }
+  @keyframes shoot { 0% { transform: scale(0); } 100% { transform: scale(2); opacity:0; } }
+
+  /* 战斗日志 */
+  .battle-log {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    text-align: center; font-size: 13px; font-weight: 700;
+    color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.7);
+    pointer-events: none; min-height: 16px;
+    opacity: 0; transition: opacity 0.3s;
+    z-index: 12;
+    white-space: nowrap;
+  }
+  .battle-log.show { opacity: 1; animation: logFlash 2s; }
+  @keyframes logFlash { 0% { opacity:0; } 15% { opacity:1; } 85% { opacity:1; } 100% { opacity:0; } }
+
+  .ground { position: absolute; bottom: 0; left: 0; right: 0; height: 28px; background: linear-gradient(180deg, #8D6E63, #6D4C41); }
+
+  .zombie-warning {
+    position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+    background: rgba(255,82,82,0.9); color: #fff;
+    padding: 3px 12px; border-radius: 12px; font-size: 11px; font-weight: 700;
+    display: none; z-index: 10;
+  }
+  .zombie-warning.show { display: block; animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+
+  /* 倒计时样式 */
+  .task-countdown {
+    font-size: 11px; font-weight: 700;
+    padding: 2px 6px; border-radius: 8px;
+    display: inline-flex; align-items: center; gap: 3px;
+  }
+  .task-countdown.safe { background: #E8F5E9; color: #2E7D32; }
+  .task-countdown.warn { background: #FFF8E1; color: #F57F17; }
+  .task-countdown.danger { background: #FFEBEE; color: #C62828; }
+  .task-countdown.urgent { background: #FFCDD2; color: #B71C1C; animation: countdownPulse 0.6s infinite; }
+  @keyframes countdownPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+  /* 阳光炮弹 — 从任务卡片飞向僵尸 */
+  .sun-bolt {
+    position: fixed; z-index: 999; pointer-events: none;
+    width: 22px; height: 22px;
+    background: radial-gradient(circle at 35% 35%, #FFF9C4, #F4B400 50%, #E65100);
+    border-radius: 50%;
+    box-shadow: 0 0 14px rgba(244,180,0,0.9), 0 0 28px rgba(255,152,0,0.5), 0 0 40px rgba(255,235,59,0.3);
+    animation: boltGlow 0.3s infinite alternate;
+  }
+  @keyframes boltGlow { from { box-shadow: 0 0 10px rgba(244,180,0,0.8), 0 0 20px rgba(255,152,0,0.4); } to { box-shadow: 0 0 18px rgba(244,180,0,1), 0 0 35px rgba(255,152,0,0.7); } }
+  .sun-bolt::after {
+    content: '';
+    position: absolute; top: -6px; left: -6px; right: -6px; bottom: -6px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,235,59,0.6), transparent 70%);
+    animation: boltAura 0.2s infinite alternate;
+  }
+  @keyframes boltAura { from { transform: scale(1); opacity: 0.6; } to { transform: scale(1.3); opacity: 1; } }
+
+  /* 僵尸被击飞 */
+  .zombie.knockback {
+    animation: zombieKnockback 0.6s forwards !important;
+  }
+  @keyframes zombieKnockback {
+    0% { transform: translateX(0) translateY(0) rotate(0); filter: brightness(3); }
+    20% { transform: translateX(20px) translateY(-20px) rotate(15deg); filter: brightness(5); }
+    40% { transform: translateX(30px) translateY(-10px) rotate(-15deg); filter: brightness(2); }
+    100% { transform: translateX(50px) translateY(30px) rotate(-90deg) scale(0.3); opacity: 0; }
+  }
+
+  /* 命中冲击波 */
+  .impact-burst {
+    position: absolute; pointer-events: none; z-index: 998;
+    width: 0; height: 0; border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,235,59,0.9), rgba(255,152,0,0.5) 40%, transparent 70%);
+    animation: impactExplode 0.5s forwards;
+  }
+  @keyframes impactExplode {
+    0% { width: 0; height: 0; opacity: 1; }
+    100% { width: 80px; height: 80px; margin-left: -40px; margin-top: -40px; opacity: 0; }
+  }
+
+  /* 画面震动 */
+  .garden-scene.shake { animation: sceneShake 0.4s; }
+  @keyframes sceneShake {
+    0%,100% { transform: translateX(0); }
+    10% { transform: translateX(-4px); }
+    20% { transform: translateX(4px); }
+    30% { transform: translateX(-3px); }
+    40% { transform: translateX(3px); }
+    50% { transform: translateX(-2px); }
+    60% { transform: translateX(2px); }
+    70% { transform: translateX(-1px); }
+  }
+
+  /* 任务列表 */
+  .task-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px; background: var(--bg); border-radius: var(--radius-s);
+    margin-bottom: 8px;
+  }
+  .task-check {
+    width: 24px; height: 24px; border-radius: 50%;
+    border: 2px solid var(--green-d); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 14px; cursor: pointer;
+    background: transparent;
+  }
+  .task-check.done { background: var(--green-d); }
+  .task-info { flex: 1; min-width: 0; }
+  .task-name { font-size: 14px; font-weight: 600; }
+  .task-name.done { text-decoration: line-through; color: var(--text-l); }
+  .task-meta { font-size: 11px; color: var(--text-l); margin-top: 2px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .task-sun { color: var(--sun-d); font-weight: 700; font-size: 12px; }
+  .task-del { color: var(--text-l); font-size: 16px; padding: 4px; cursor: pointer; }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+    padding: 10px 16px; border: none; border-radius: var(--radius-s);
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    transition: transform 0.1s;
+  }
+  .btn:active { transform: scale(0.96); }
+  .btn-primary { background: var(--green-d); color: #fff; }
+  .btn-sun { background: var(--sun-d); color: #fff; }
+  .btn-blue { background: var(--blue); color: #fff; }
+  .btn-ghost { background: var(--bg); color: var(--text); }
+  .btn-full { width: 100%; margin-top: 4px; }
+
+  /* 植物 */
+  .plant-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .plant-card {
+    background: var(--bg); border-radius: var(--radius-s); padding: 10px 6px;
+    text-align: center; position: relative;
+  }
+  .plant-card.locked { opacity: 0.45; filter: grayscale(0.6); }
+  .plant-card .p-emoji { font-size: 30px; }
+  .plant-card .p-name { font-size: 11px; font-weight: 600; margin-top: 2px; }
+  .plant-card .p-desc { font-size: 9px; color: var(--text-l); margin-top: 2px; }
+  .plant-card .p-cost { font-size: 10px; color: var(--sun-d); font-weight: 700; margin-top: 4px; }
+  .plant-card .lock-icon { position: absolute; top: 4px; right: 4px; font-size: 12px; }
+
+  /* 情绪 */
+  .mood-row { display: flex; justify-content: space-around; margin: 8px 0; }
+  .mood-btn {
+    font-size: 30px; padding: 8px; border-radius: 50%;
+    background: var(--bg); border: 2px solid transparent;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .mood-btn:active, .mood-btn.sel { transform: scale(1.15); border-color: var(--green-d); }
+  .mood-card {
+    background: linear-gradient(135deg, #FFF9C4, #FFECB3);
+    border-radius: var(--radius); padding: 16px; margin: 10px 0;
+    border-left: 4px solid var(--sun-d);
+  }
+  .mood-card .mc-title { font-weight: 700; font-size: 14px; margin-bottom: 6px; }
+  .mood-card .mc-text { font-size: 13px; color: var(--text); line-height: 1.6; }
+  .tree-hole {
+    background: #5D4037; color: #FFE0B2; border-radius: var(--radius);
+    padding: 14px; margin-top: 10px;
+  }
+  .tree-hole textarea {
+    width: 100%; background: rgba(255,255,255,0.15); color: #fff;
+    border: none; border-radius: var(--radius-s); padding: 10px;
+    font-size: 13px; min-height: 60px; resize: none; font-family: inherit;
+  }
+  .tree-hole textarea::placeholder { color: rgba(255,255,255,0.6); }
+  .feeling-list { margin-top: 8px; }
+  .feeling-item {
+    background: rgba(255,255,255,0.1); border-radius: var(--radius-s);
+    padding: 8px 10px; margin-top: 6px; font-size: 12px; color: #FFE0B2;
+  }
+  .feeling-item .f-time { font-size: 10px; opacity: 0.7; }
+
+  /* 番茄钟 */
+  .pomodoro {
+    text-align: center; padding: 20px 0;
+  }
+  .pomo-ring {
+    width: 180px; height: 180px; margin: 0 auto 16px;
+    position: relative;
+  }
+  .pomo-ring svg { transform: rotate(-90deg); }
+  .pomo-ring .pomo-time {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    font-size: 36px; font-weight: 700; color: var(--text);
+  }
+  .pomo-ring .pomo-state { position: absolute; top: 68%; left: 50%; transform: translateX(-50%); font-size: 12px; color: var(--text-l); }
+  .pomo-controls { display: flex; gap: 10px; justify-content: center; }
+  .pomo-mode { display: flex; gap: 8px; justify-content: center; margin-bottom: 14px; }
+  .pomo-mode span {
+    padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;
+    background: var(--bg); color: var(--text-l);
+  }
+  .pomo-mode span.active { background: var(--green-d); color: #fff; }
+
+  /* 能力图谱 */
+  .ability-item { margin-bottom: 12px; }
+  .ability-head { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .ability-bar { height: 10px; background: var(--bg); border-radius: 5px; overflow: hidden; }
+  .ability-fill { height: 100%; border-radius: 5px; transition: width 0.8s ease; }
+
+  /* 错题本 */
+  .wrong-item {
+    background: var(--bg); border-radius: var(--radius-s); padding: 10px;
+    margin-bottom: 8px;
+  }
+  .wrong-item .w-q { font-size: 13px; font-weight: 600; }
+  .wrong-item .w-a { font-size: 12px; color: var(--red); margin-top: 4px; }
+  .wrong-item .w-tag { display: inline-block; background: var(--red); color: #fff; font-size: 10px; padding: 1px 6px; border-radius: 4px; margin-top: 4px; }
+  .wrong-item.fixed { opacity: 0.6; }
+  .wrong-item.fixed .w-tag { background: var(--green-d); }
+
+  /* 目标 */
+  .goal-item { display: flex; align-items: center; gap: 10px; padding: 10px; background: var(--bg); border-radius: var(--radius-s); margin-bottom: 8px; }
+  .goal-progress { width: 40px; height: 40px; flex-shrink: 0; }
+
+  /* 亲子 */
+  .note-item {
+    background: linear-gradient(135deg, #FFF9C4, #FFE0B2);
+    border-radius: var(--radius-s); padding: 12px; margin-bottom: 8px;
+    position: relative;
+  }
+  .note-item .n-from { font-size: 11px; color: var(--orange); font-weight: 700; margin-bottom: 4px; }
+  .note-item .n-text { font-size: 13px; line-height: 1.5; }
+  .reward-item {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--bg); border-radius: var(--radius-s); padding: 10px; margin-bottom: 8px;
+  }
+  .reward-item .r-icon { font-size: 28px; }
+  .reward-item .r-info { flex: 1; }
+  .reward-item .r-name { font-size: 13px; font-weight: 600; }
+  .reward-item .r-cost { font-size: 11px; color: var(--sun-d); font-weight: 700; }
+  .reward-item .r-btn { background: var(--sun-d); color: #fff; border: none; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .reward-item .r-btn:disabled { background: #CCC; }
+
+  .report-section { margin-bottom: 14px; }
+  .report-section h4 { font-size: 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 4px; }
+  .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .stat-box { background: var(--bg); border-radius: var(--radius-s); padding: 10px; text-align: center; }
+  .stat-box .s-num { font-size: 22px; font-weight: 700; color: var(--green-d); }
+  .stat-box .s-label { font-size: 11px; color: var(--text-l); margin-top: 2px; }
+  .advice-item { background: #E3F2FD; border-radius: var(--radius-s); padding: 10px; margin-bottom: 6px; font-size: 12px; line-height: 1.5; border-left: 3px solid var(--blue); }
+
+  /* 底部导航 */
+  .tabbar {
+    flex-shrink: 0;
+    display: flex;
+    background: #fff;
+    border-top: 1px solid #E0E0E0;
+    padding: 6px 0 calc(var(--safe-bottom) + 6px);
+    box-shadow: 0 -2px 8px rgba(0,0,0,0.06);
+  }
+  .tab {
+    flex: 1; text-align: center; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    color: var(--text-l); font-size: 10px;
+  }
+  .tab .t-ico { font-size: 22px; }
+  .tab.active { color: var(--green-d); }
+
+  /* 弹窗 */
+  .modal-mask {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    display: none; align-items: flex-end; justify-content: center;
+    z-index: 100; animation: fadeIn 0.2s;
+  }
+  .modal-mask.show { display: flex; }
+  .modal {
+    background: #fff; border-radius: 20px 20px 0 0;
+    width: 100%; max-width: 500px;
+    padding: 20px 16px calc(var(--safe-bottom) + 20px);
+    max-height: 85vh; overflow-y: auto;
+    animation: slideUp 0.3s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .modal h3 { font-size: 17px; margin-bottom: 14px; text-align: center; }
+  .modal .close-x { position: absolute; top: 12px; right: 16px; font-size: 22px; color: var(--text-l); cursor: pointer; }
+  .form-group { margin-bottom: 12px; }
+  .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; color: var(--text-l); }
+  .form-group input, .form-group select, .form-group textarea {
+    width: 100%; padding: 10px; border: 1.5px solid #E0E0E0; border-radius: var(--radius-s);
+    font-size: 14px; font-family: inherit; background: #FAFAFA;
+  }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--green-d); background: #fff; }
+
+  /* Toast */
+  .toast {
+    position: fixed; top: 70px; left: 50%; transform: translateX(-50%);
+    background: rgba(46,58,47,0.92); color: #fff;
+    padding: 10px 18px; border-radius: 20px; font-size: 13px; font-weight: 600;
+    z-index: 200; opacity: 0; transition: opacity 0.3s; pointer-events: none;
+    max-width: 80%; text-align: center;
+  }
+  .toast.show { opacity: 1; }
+
+  .empty { text-align: center; padding: 30px 10px; color: var(--text-l); font-size: 13px; }
+  .empty .e-ico { font-size: 40px; margin-bottom: 8px; opacity: 0.5; }
+
+  /* Twemoji 样式：让 img 像原生 emoji 一样跟随父元素字号缩放 */
+  img.emoji {
+    height: 1em;
+    width: 1em;
+    margin: 0 0.05em 0 0.1em;
+    vertical-align: -0.1em;
+    display: inline-block;
+  }
+  /* 大尺寸容器内的 emoji 需要更大的尺寸 */
+  .plant-item img.emoji,
+  .garden-scene .sky-sun img.emoji,
+  .garden-scene .cloud img.emoji,
+  .p-emoji img.emoji,
+  .mood-btn img.emoji,
+  .r-icon img.emoji {
+    height: 1em;
+    width: 1em;
+  }
+
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+  .badge-green { background: var(--green-l); color: var(--green-d); }
+  .badge-orange { background: #FFE0B2; color: var(--orange); }
+  .badge-red { background: #FFCDD2; color: var(--red); }
+  .badge-blue { background: #B3E5FC; color: #0288D1; }
+
+  .section-head { display: flex; justify-content: space-between; align-items: center; margin: 14px 2px 8px; }
+  .section-head h3 { font-size: 15px; }
+  .section-head .more { font-size: 12px; color: var(--green-d); cursor: pointer; }
+
+  .pill-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+  .pill { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; background: var(--bg); color: var(--text-l); cursor: pointer; }
+  .pill.active { background: var(--green-d); color: #fff; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="title" id="topTitle">🌻 阳光花园</div>
+  <div class="sun-meter">☀️ <span id="sunCount">0</span></div>
+  <button class="role-switch" onclick="switchRole()">
+    <span id="roleIcon">🧒</span> <span id="roleName">孩子</span>
+  </button>
+</div>
+
+<div class="main" id="mainArea">
+
+  <!-- ============ 孩子-花园 ============ -->
+  <div class="view active" id="view-garden">
+    <div class="garden-scene" id="gardenScene">
+      <div class="sky-sun">☀️</div>
+      <div class="cloud">☁️</div>
+      <div class="zombie-warning" id="zombieWarn">⚠️ 僵尸来袭！快完成任务击退它</div>
+      <div class="battle-log" id="battleLog"></div>
+      <div class="plants-row" id="plantsRow"></div>
+      <div class="ground"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="ico">📋</span>今日任务守护</div>
+      <div class="pill-row" id="taskFilter"></div>
+      <div id="taskList"></div>
+      <button class="btn btn-primary btn-full" id="btnAddTask" onclick="openTaskModal()" style="display:none;">➕ 添加新任务</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="ico">🌱</span>我的花园（种植物）</div>
+      <div class="plant-grid" id="plantGrid"></div>
+      <button class="btn btn-ghost btn-full" id="btnAddPlant" onclick="openPlantModal()">🌱 种植新植物</button>
+    </div>
+
+    <div class="card" id="cardRewards">
+      <div class="card-title"><span class="ico">🎁</span>阳光兑换站</div>
+      <p style="font-size:12px;color:var(--text-l);margin-bottom:8px;" id="rewardHint">用阳光值兑换现实奖励，兑换后让家长兑现～</p>
+      <div id="rewardList"></div>
+      <button class="btn btn-ghost btn-full" id="btnAddReward" onclick="openRewardModal()" style="display:none;">➕ 添加奖励</button>
+    </div>
+  </div>
+
+  <!-- ============ 孩子-情绪小站 ============ -->
+  <div class="view" id="view-mood">
+    <div class="card">
+      <div class="card-title"><span class="ico">💖</span>你现在心情怎么样？</div>
+      <div class="mood-row">
+        <div class="mood-btn" data-mood="happy" onclick="selectMood(this,'😊','开心')">😊</div>
+        <div class="mood-btn" data-mood="ok" onclick="selectMood(this,'😐','一般')">😐</div>
+        <div class="mood-btn" data-mood="tired" onclick="selectMood(this,'😮‍💨','有点累')">😮‍💨</div>
+        <div class="mood-btn" data-mood="sad" onclick="selectMood(this,'😢','难过')">😢</div>
+        <div class="mood-btn" data-mood="angry" onclick="selectMood(this,'😠','生气')">😠</div>
+      </div>
+      <div id="moodAdvice"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="ico">🌳</span>情绪树洞</div>
+      <p style="font-size:12px;color:var(--text-l);margin-bottom:8px;">把你的感受写下来，树洞会替你保守秘密～</p>
+      <div class="tree-hole">
+        <textarea id="treeHoleInput" placeholder="今天我想说..."></textarea>
+        <button class="btn btn-sun btn-full" style="margin-top:8px;" onclick="saveFeeling()">投递到树洞 💌</button>
+      </div>
+      <div class="feeling-list" id="feelingList"></div>
+    </div>
+  </div>
+
+  <!-- ============ 孩子-成长手册 ============ -->
+  <div class="view" id="view-growth">
+    <div class="card">
+      <div class="card-title"><span class="ico">🍅</span>番茄专注钟</div>
+      <div class="pomo-mode">
+        <span class="active" id="modeWork" onclick="setPomoMode('work')">学习 25分钟</span>
+        <span id="modeRest" onclick="setPomoMode('rest')">休息 5分钟</span>
+      </div>
+      <div class="pomodoro">
+        <div class="pomo-ring">
+          <svg width="180" height="180">
+            <circle cx="90" cy="90" r="80" fill="none" stroke="#E8F5E9" stroke-width="10"/>
+            <circle id="pomoCircle" cx="90" cy="90" r="80" fill="none" stroke="#5BB73A" stroke-width="10" stroke-linecap="round" stroke-dasharray="502" stroke-dashoffset="0"/>
+          </svg>
+          <div class="pomo-time" id="pomoTime">25:00</div>
+          <div class="pomo-state" id="pomoState">准备开始</div>
+        </div>
+        <div class="pomo-controls">
+          <button class="btn btn-primary" id="pomoStartBtn" onclick="togglePomo()">▶️ 开始</button>
+          <button class="btn btn-ghost" onclick="resetPomo()">🔄 重置</button>
+        </div>
+      </div>
+      <div style="text-align:center;font-size:12px;color:var(--text-l);margin-top:8px;">
+        今日专注 <b id="todayFocus" style="color:var(--green-d)">0</b> 分钟 · 累计完成 <b id="pomoCount" style="color:var(--green-d)">0</b> 个番茄
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="ico">📊</span>能力图谱</div>
+      <div id="abilityChart"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="ico">🎯</span>成长目标</div>
+      <div id="goalList"></div>
+      <button class="btn btn-ghost btn-full" onclick="openGoalModal()">➕ 设置新目标</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="ico">📝</span>错题小课堂</div>
+      <div id="wrongList"></div>
+      <button class="btn btn-ghost btn-full" onclick="openWrongModal()">➕ 添加错题</button>
+    </div>
+  </div>
+
+  <!-- ============ 家长-亲子空间站 ============ -->
+  <div class="view" id="view-parent">
+    <div class="card">
+      <div class="card-title"><span class="ico">💌</span>鼓励小纸条</div>
+      <p style="font-size:12px;color:var(--text-l);margin-bottom:8px;">给孩子写一句鼓励的话吧～</p>
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="noteInput" placeholder="例如：今天的字写得很工整！" style="flex:1;padding:10px;border:1.5px solid #E0E0E0;border-radius:10px;font-size:13px;">
+        <button class="btn btn-primary" onclick="sendNote()">送出</button>
+      </div>
+      <div style="margin-top:10px;" id="noteList"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="ico">🤝</span>亲子协作任务</div>
+      <div id="parentTaskList"></div>
+      <button class="btn btn-ghost btn-full" onclick="openParentTaskModal()">➕ 添加亲子任务</button>
+    </div>
+
+    <div class="card" style="background:#FFF8E1;">
+      <div class="card-title"><span class="ico">🔐</span>家长密码设置</div>
+      <p style="font-size:12px;color:var(--text-l);margin-bottom:8px;">修改切换家长端的密码（默认1234，建议修改为只有家长知道的密码）</p>
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="newPwdInput2" placeholder="输入新密码" style="flex:1;padding:10px;border:1.5px solid #E0E0E0;border-radius:10px;font-size:13px;">
+        <button class="btn btn-primary" onclick="changePassword2()">保存</button>
+      </div>
+    </div>
+
+    <div class="card" style="background:#E8F5E9;">
+      <div class="card-title"><span class="ico">💾</span>数据备份</div>
+      <p style="font-size:12px;color:var(--text-l);margin-bottom:8px;">导出数据到文件永久保存，或从备份文件恢复数据。清空缓存不会丢失。</p>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary" onclick="exportData()" style="flex:1;">📥 导出备份</button>
+        <button class="btn btn-ghost" onclick="document.getElementById('importFile').click()" style="flex:1;">📤 导入备份</button>
+      </div>
+      <input type="file" id="importFile" accept=".json" style="display:none;" onchange="importData(event)">
+      <div id="backupInfo" style="font-size:11px;color:var(--text-l);margin-top:6px;"></div>
+    </div>
+  </div>
+
+  <!-- ============ 家长-成长报告 ============ -->
+  <div class="view" id="view-report">
+    <div class="card">
+      <div class="card-title"><span class="ico">📈</span>本周成长报告</div>
+      <div class="report-section">
+        <h4>📊 学习数据</h4>
+        <div class="stat-grid">
+          <div class="stat-box"><div class="s-num" id="repTask">0</div><div class="s-label">完成任务</div></div>
+          <div class="stat-box"><div class="s-num" id="repFocus">0</div><div class="s-label">专注分钟</div></div>
+          <div class="stat-box"><div class="s-num" id="repWrong">0</div><div class="s-label">错题订正</div></div>
+          <div class="stat-box"><div class="s-num" id="repSun">0</div><div class="s-label">获得阳光</div></div>
+        </div>
+      </div>
+      <div class="report-section">
+        <h4>😊 情绪记录</h4>
+        <div id="repMood" style="font-size:13px;color:var(--text-l);"></div>
+      </div>
+      <div class="report-section">
+        <h4>💡 教育建议</h4>
+        <div id="repAdvice"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- 底部导航 -->
+<div class="tabbar" id="tabbar"></div>
+
+<!-- 模态框容器 -->
+<div class="modal-mask" id="modalMask" onclick="closeModalOnMask(event)">
+  <div class="modal" id="modalContent" style="position:relative;"></div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===================== 数据层 ===================== */
+const STORAGE_KEY = 'sunshineGardenData_v1';
+const PLANT_LIBRARY = [
+  { id:'sunflower', emoji:'🌻', name:'向日葵', desc:'专注25分钟', cost:30, habit:'focus' },
+  { id:'nut', emoji:'🥜', name:'坚果墙', desc:'错题订正', cost:20, habit:'fixwrong' },
+  { id:'cactus', emoji:'🌵', name:'仙人掌', desc:'主动提问', cost:15, habit:'ask' },
+  { id:'peashooter', emoji:'🌱', name:'豌豆射手', desc:'完成任务', cost:25, habit:'task' },
+  { id:'cherry', emoji:'🍒', name:'樱桃炸弹', desc:'连续3天专注', cost:60, habit:'streak' },
+  { id:'ice', emoji:'❄️', name:'寒冰射手', desc:'阅读20分钟', cost:35, habit:'read' },
+  { id:'pumpkin', emoji:'🎃', name:'南瓜头', desc:'月度目标达成', cost:100, habit:'goal' },
+  { id:'rose', emoji:'🌹', name:'阳光玫瑰', desc:'亲子任务完成', cost:40, habit:'parent' },
+  { id:'star', emoji:'⭐', name:'星光花', desc:'考试进步', cost:80, habit:'exam' },
+];
+
+let defaultData = {
+  role: 'child',
+  sun: 0,
+  tasks: [],
+  plants: [],
+  moods: [],
+  feelings: [],
+  wrongs: [],
+  goals: [],
+  notes: [],
+  rewards: [],
+  parentTasks: [],
+  pomo: { mode:'work', running:false, remaining:25*60, todayFocus:0, count:0, lastDate:'' },
+  tab: 'garden',
+};
+let state = loadData();
+
+function loadData(){
+  try{
+    const s = localStorage.getItem(STORAGE_KEY);
+    if(s){ return Object.assign({}, defaultData, JSON.parse(s)); }
+  }catch(e){}
+  // 预置示例数据
+  return {
+    role:'child', sun: 120,
+    tasks: [
+      { id:uid(), name:'语文背诵《静夜思》', cat:'语文', sun:20, done:false, createdAt:Date.now(), deadlineMinutes:30 },
+      { id:uid(), name:'口算练习 20题', cat:'数学', sun:15, done:false, createdAt:Date.now(), deadlineMinutes:45 },
+      { id:uid(), name:'阅读课外书 20分钟', cat:'阅读', sun:25, done:false, createdAt:Date.now(), deadlineMinutes:60 },
+    ],
+    plants: ['sunflower','peashooter'],
+    moods: [],
+    feelings: [],
+    wrongs: [
+      { id:uid(), subject:'数学', q:'36 ÷ 6 = ?', a:'写成了 6，应为 6...实际正确', fixed:false, date:Date.now()-86400000 },
+    ],
+    goals: [
+      { id:uid(), name:'数学计算速度提高10%', cur:40, target:100, unit:'%' },
+      { id:uid(), name:'每天阅读30分钟', cur:4, target:7, unit:'天' },
+    ],
+    notes: [],
+    rewards: [
+      { id:uid(), name:'看30分钟电视', icon:'📺', cost:50 },
+      { id:uid(), name:'买一本喜欢的书', icon:'📚', cost:100 },
+      { id:uid(), name:'周末去公园玩', icon:'🎢', cost:200 },
+    ],
+    redeemed: [], // 已兑换奖励记录: { id, name, icon, cost, time, fulfilled }
+    parentTasks: [],
+    pomo: { mode:'work', running:false, remaining:25*60, todayFocus:0, count:0, lastDate:'' },
+    tab:'garden',
+  };
+}
+function saveData(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+/* 角色权限：孩子端隐藏管理按钮，家长端可管理 */
+function applyRolePermissions(){
+  const isChild = state.role === 'child';
+  const isGardenView = state.tab === 'garden';
+
+  // 添加任务按钮：孩子端隐藏
+  const addBtn = document.getElementById('btnAddTask');
+  if(addBtn) addBtn.style.display = (isChild && isGardenView) ? 'none' : '';
+
+  // 删除按钮：孩子端隐藏
+  document.querySelectorAll('.task-del').forEach(el => {
+    el.style.display = isChild ? 'none' : '';
+  });
+}
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+
+/* ===================== 渲染层 ===================== */
+function render(){
+  // 顶部
+  document.getElementById('sunCount').textContent = state.sun;
+  document.getElementById('roleIcon').textContent = state.role==='child' ? '🧒' : '👨‍👩‍👧';
+  document.getElementById('roleName').textContent = state.role==='child' ? '孩子' : '家长';
+
+  // 视图切换
+  const views = ['garden','mood','growth','parent','report'];
+  views.forEach(v => {
+    const el = document.getElementById('view-'+v);
+    if(el) el.classList.remove('active');
+  });
+
+  // 根据角色显示对应视图和Tab
+  const tabbar = document.getElementById('tabbar');
+  let tabs;
+  if(state.role === 'child'){
+    tabs = [
+      {id:'garden', ico:'🌻', name:'花园'},
+      {id:'mood', ico:'💖', name:'情绪'},
+      {id:'growth', ico:'📈', name:'成长'},
+    ];
+    document.getElementById('topTitle').textContent = '🌻 阳光花园';
+  }else{
+    tabs = [
+      {id:'parent', ico:'🤝', name:'亲子站'},
+      {id:'report', ico:'📊', name:'成长报告'},
+      {id:'garden', ico:'🌻', name:'查看花园'},
+    ];
+    document.getElementById('topTitle').textContent = '👨‍👩‍👧 亲子空间站';
+  }
+
+  // 确保当前tab在当前角色下可用
+  const validTabs = tabs.map(t=>t.id);
+  if(!validTabs.includes(state.tab)) state.tab = tabs[0].id;
+
+  tabbar.innerHTML = tabs.map(t => `
+    <div class="tab ${state.tab===t.id?'active':''}" onclick="switchTab('${t.id}')">
+      <span class="t-ico">${t.ico}</span>${t.name}
+    </div>`).join('');
+
+  const curView = document.getElementById('view-'+state.tab);
+  if(curView) curView.classList.add('active');
+
+  // 渲染各模块
+  renderGarden();
+  renderRewards(); // 奖励兑换（孩子端可兑换，家长端可管理）
+  renderMood();
+  renderGrowth();
+  renderParent();
+  renderReport();
+
+  // 重新解析 emoji 为 Twemoji 图标（保证跨设备显示）
+  if(window.twemoji){
+    try{
+      twemoji.parse(document.body, { folder:'svg', ext:'.svg' });
+    }catch(e){ console.warn('twemoji err', e); }
+  }
+
+  // 角色权限控制：孩子端隐藏添加/删除按钮
+  applyRolePermissions();
+
+  saveData();
+}
+
+/* ---- 花园战斗系统 ---- */
+// 僵尸对象池：每个未完成任务对应一个行走的僵尸
+let zombieEntities = []; // { id, taskId, el, pos(0-100, 越大越靠近花园), lane }
+let battleTimer = null;
+// 僵尸速度不再固定，改为根据任务 deadline 动态计算
+// 公式：每秒速度 = 100 / 剩余秒数（确保僵尸在 deadline 时刚好走完 100%）
+const ZOMBIE_EAT_INTERVAL = 5;  // 僵尸到达植物后每5秒吃掉一个植物（秒）
+const ZOMBIE_DEFAULT_DEADLINE = 30; // 旧数据兼容：默认30分钟
+
+function renderGarden(){
+  // 1. 渲染植物（右侧防御阵地）
+  const row = document.getElementById('plantsRow');
+  row.innerHTML = state.plants.map(pid => {
+    const p = PLANT_LIBRARY.find(x=>x.id===pid) || (state.customPlants||[]).find(x=>x.id===pid);
+    if(!p) return '';
+    return `<div class="plant-item" data-pid="${pid}" onclick="toast('${p.name}：${p.desc}')">${p.emoji}<span class="label">${p.name}</span></div>`;
+  }).join('') || '<div style="color:#fff;font-size:12px;opacity:0.7;align-self:center;margin-right:auto;padding-left:12px;">完成任务解锁植物吧～</div>';
+
+  // 2. 同步僵尸实体：未完成任务 = 僵尸
+  const undoneTasks = state.tasks.filter(t=>!t.done);
+  const warn = document.getElementById('zombieWarn');
+
+  if(undoneTasks.length > 0){
+    warn.classList.add('show');
+    warn.textContent = `⚠️ ${undoneTasks.length}个僵尸入侵中！完成任务击退它们`;
+  }else{
+    warn.classList.remove('show');
+  }
+
+  // 移除已完成任务对应的僵尸
+  zombieEntities = zombieEntities.filter(z => {
+    const task = state.tasks.find(t=>t.id===z.taskId);
+    if(!task || task.done){
+      // 任务完成，僵尸被击败
+      defeatZombie(z, '🎉 任务完成，僵尸被击退！');
+      return false;
+    }
+    return true;
+  });
+
+  // 新增未完成任务对应的僵尸（从可见区域左侧入场）
+  undoneTasks.forEach((task, i) => {
+    const exists = zombieEntities.find(z=>z.taskId===task.id);
+    if(!exists){
+      const lane = i % 3; // 三条车道，均匀分布
+      // 僵尸从可见区域左边缘开始，横向错开以区分不同僵尸
+      const startPositions = [2, 10, 18]; // 三个僵尸在可见区域的不同横向位置
+      zombieEntities.push({
+        id: 'z_'+task.id,
+        taskId: task.id,
+        pos: startPositions[i % 3],
+        lane,
+        el: null,
+      });
+    }
+  });
+
+  // 3. 启动战斗循环
+  startBattleLoop();
+
+  // 4. 任务筛选与列表（保持不变）
+  const cats = ['全部','语文','数学','英语','阅读','其他'];
+  const filterEl = document.getElementById('taskFilter');
+  filterEl.innerHTML = cats.map(c => `<span class="pill ${currentFilter===c?'active':''}" onclick="setFilter('${c}')">${c}</span>`).join('');
+
+  const list = document.getElementById('taskList');
+  let tasks = state.tasks;
+  if(currentFilter !== '全部') tasks = tasks.filter(t=>t.cat===currentFilter);
+  if(tasks.length === 0){
+    list.innerHTML = '<div class="empty"><div class="e-ico">📝</div>还没有任务，快添加吧～</div>';
+  }else{
+    list.innerHTML = tasks.map(t => {
+      // 计算倒计时
+      const dlMin = t.deadlineMinutes || ZOMBIE_DEFAULT_DEADLINE;
+      const totalSec = dlMin * 60;
+      const elapsed = (Date.now() - (t.createdAt||Date.now())) / 1000;
+      const remaining = Math.max(0, Math.round(totalSec - elapsed));
+      const remMin = Math.floor(remaining / 60);
+      const remSec = remaining % 60;
+      const ratio = remaining / totalSec;
+      let cdClass = 'safe';
+      if(ratio < 0.1) cdClass = 'urgent';
+      else if(ratio < 0.25) cdClass = 'danger';
+      else if(ratio < 0.5) cdClass = 'warn';
+
+      const cdHTML = t.done ? '' : `
+        <span class="task-countdown ${cdClass}">⏱️ ${remMin}:${remSec.toString().padStart(2,'0')}</span>`;
+
+      return `
+      <div class="task-item">
+        <div class="task-check ${t.done?'done':''}" onclick="toggleTask('${t.id}')">${t.done?'✓':''}</div>
+        <div class="task-info">
+          <div class="task-name ${t.done?'done':''}">${t.name}</div>
+          <div class="task-meta">
+            <span class="badge badge-green">${t.cat}</span>
+            <span class="task-sun">☀️ +${t.sun}</span>
+            ${cdHTML}
+          </div>
+        </div>
+        <span class="task-del" onclick="delTask('${t.id}')" style="${state.role==='child'?'display:none':''}">🗑️</span>
+      </div>`}).join('');
+  }
+
+  // 5. 种植系统（孩子端可种植，家长端也可管理）
+  const grid = document.getElementById('plantGrid');
+  const plantBtn = document.getElementById('btnAddPlant');
+  const isChild = state.role === 'child';
+
+  // 自定义植物合并到库中展示
+  const allPlants = [...PLANT_LIBRARY, ...(state.customPlants||[])];
+  grid.innerHTML = allPlants.map(p => {
+    const owned = state.plants.includes(p.id);
+    const emoji = p.emoji || '🌱';
+    const name = p.name || '植物';
+    return `<div class="plant-card ${owned?'':'locked'}">
+      ${owned?'':'<span class="lock-icon">🔒</span>'}
+      <div class="p-emoji">${owned?emoji:'❔'}</div>
+      <div class="p-name">${name}</div>
+      <div class="p-desc">${p.desc||''}</div>
+      <div class="p-cost">☀️ ${p.cost}</div>
+      ${!owned?`<button class="btn btn-sun" style="margin-top:6px;padding:4px 8px;font-size:11px;width:100%;" onclick="plantSeed('${p.id}')">种植</button>`:'<div style="margin-top:6px;font-size:10px;color:var(--green-d);font-weight:600;">已种植 ✓</div>'}
+    </div>`;
+  }).join('') || '<div class="empty" style="padding:16px;"><div class="e-ico">🌱</div>还没有植物，快来种吧！</div>';
+
+  // 种植按钮：孩子端和家长端都可见
+  if(plantBtn) plantBtn.style.display = '';
+}
+
+/* 启动战斗循环（僵尸行走+吃植物） */
+function startBattleLoop(){
+  if(battleTimer) return;
+  battleTimer = setInterval(()=>{
+    if(state.tab !== 'garden') return;
+    updateZombies();
+  }, 200);
+  // 每秒刷新倒计时显示（只更新DOM，不重新渲染整个花园）
+  setInterval(()=>{
+    if(state.tab !== 'garden') return;
+    updateCountdowns();
+  }, 1000);
+}
+
+/* 实时刷新任务卡片上的倒计时（不触发完整render） */
+function updateCountdowns(){
+  const taskItems = document.querySelectorAll('#taskList .task-item');
+  taskItems.forEach((item, i) => {
+    const cdEl = item.querySelector('.task-countdown');
+    if(!cdEl) return;
+    const task = state.tasks[i];
+    if(!task || task.done) { cdEl.remove(); return; }
+    const dlMin = task.deadlineMinutes || ZOMBIE_DEFAULT_DEADLINE;
+    const totalSec = dlMin * 60;
+    const elapsed = (Date.now() - (task.createdAt||Date.now())) / 1000;
+    const remaining = Math.max(0, Math.round(totalSec - elapsed));
+    const remMin = Math.floor(remaining / 60);
+    const remSec = remaining % 60;
+    const ratio = remaining / totalSec;
+    let cdClass = 'safe';
+    if(ratio < 0.1) cdClass = 'urgent';
+    else if(ratio < 0.25) cdClass = 'danger';
+    else if(ratio < 0.5) cdClass = 'warn';
+    cdEl.className = 'task-countdown ' + cdClass;
+    cdEl.textContent = `⏱️ ${remMin}:${remSec.toString().padStart(2,'0')}`;
+  });
+}
+
+/* 僵尸前进 + 到达植物位置时吃植物 */
+function updateZombies(){
+  const scene = document.getElementById('gardenScene');
+  if(!scene) return;
+
+  const plantZoneStart = 60;
+  const now = Date.now();
+
+  zombieEntities.forEach(z => {
+    if(z.defeated) return;
+
+    // 根据任务 deadline 动态计算僵尸速度
+    const task = state.tasks.find(t=>t.id===z.taskId);
+    const deadlineMin = (task && task.deadlineMinutes) ? task.deadlineMinutes : ZOMBIE_DEFAULT_DEADLINE;
+    const created = (task && task.createdAt) ? task.createdAt : now;
+    const totalSec = deadlineMin * 60;
+    const elapsedSec = (now - created) / 1000;
+    const remainingSec = Math.max(0, totalSec - elapsedSec);
+
+    // 速度 = 每秒需要走的百分比（确保在 deadline 时刚好到达 100%）
+    // 如果已经超时，速度极快
+    let speedPerSec;
+    if(remainingSec <= 0){
+      speedPerSec = 50; // 超时后瞬间冲过去
+    } else {
+      // 僵尸需要从当前位置走到 100%（或植物位置），在剩余时间内
+      const targetPos = state.plants.length > 0 ? plantZoneStart : 90;
+      const remainingDist = Math.max(0, targetPos - z.pos);
+      speedPerSec = remainingDist / remainingSec;
+      // 最低速度保证有感知
+      if(speedPerSec < 0.15) speedPerSec = 0.15;
+    }
+
+    const speedPerFrame = speedPerSec * 0.2; // 200ms 一帧
+
+    const plantsCount = state.plants.length;
+    if(plantsCount > 0 && z.pos < plantZoneStart){
+      z.pos += speedPerFrame;
+    } else if(plantsCount === 0 && z.pos < 90){
+      z.pos += speedPerFrame * 1.3;
+    } else if(plantsCount > 0 && z.pos >= plantZoneStart){
+      // 到达植物防线，开始啃食
+      z.eatingTimer = (z.eatingTimer||0) + 0.2;
+      if(z.eatingTimer >= ZOMBIE_EAT_INTERVAL){
+        z.eatingTimer = 0;
+        eatPlant(z);
+      }
+    }
+    renderZombie(z);
+  });
+
+  // 无植物时僵尸走到核心位置，提示危机
+  if(state.plants.length === 0){
+    const reached = zombieEntities.find(z => z.pos >= 80 && !z.defeated);
+    if(reached && !state._zombieCoreWarned){
+      state._zombieCoreWarned = true;
+      showBattleLog('⚠️ 僵尸已入侵花园！赶紧完成任务！');
+    }
+  } else {
+    state._zombieCoreWarned = false;
+  }
+}
+
+/* 渲染单个僵尸（卡通版：头+身体+手脚） */
+function renderZombie(z){
+  let el = z.el;
+  if(!el || !el.parentNode){
+    el = document.createElement('div');
+    el.className = 'zombie';
+    el.innerHTML = `
+      <div class="z-head">
+        <div class="z-eye left"></div>
+        <div class="z-eye right"></div>
+        <div class="z-mouth"></div>
+      </div>
+      <div class="z-body"></div>
+      <div class="z-arm left"><div class="z-hand"></div></div>
+      <div class="z-arm right"><div class="z-hand"></div></div>
+      <div class="z-leg left"></div>
+      <div class="z-leg right"></div>`;
+    document.getElementById('gardenScene').appendChild(el);
+    z.el = el;
+  }
+  // 三条车道都在地面区域（场景底部），僵尸站地上
+  const laneBottom = [10, 30, 50][z.lane % 3];
+  el.style.left = z.pos + '%';
+  el.style.bottom = laneBottom + 'px';
+}
+
+/* 僵尸被击败 — 阳光炮弹打击效果 */
+function defeatZombie(z, msg, fromTaskEl){
+  if(z.defeated) return;
+  z.defeated = true;
+
+  // 从任务卡片发射阳光炮弹，飞向僵尸
+  if(z.el && fromTaskEl){
+    fireSunBolt(fromTaskEl, z.el, ()=>{
+      if(z.el){
+        z.el.classList.add('knockback');
+      }
+      spawnImpactBurst(z.el);
+      shakeScene();
+      showBattleLog(msg || '💥 僵尸被阳光击退！');
+    });
+  } else {
+    if(z.el){
+      z.el.classList.add('knockback');
+      spawnImpactBurst(z.el);
+      shakeScene();
+    }
+    showBattleLog(msg || '💥 僵尸被击退！');
+  }
+
+  const el = z.el;
+  setTimeout(()=>{ if(el && el.parentNode) el.remove(); }, 650);
+  z.el = null;
+  setTimeout(()=>{
+    zombieEntities = zombieEntities.filter(x=>x.id !== z.id);
+  }, 700);
+}
+
+/* 阳光炮弹从任务卡片飞向僵尸（使用CSS transition，不依赖rAF） */
+function fireSunBolt(fromEl, toZombieEl, onHit){
+  const bolt = document.createElement('div');
+  bolt.className = 'sun-bolt';
+  const fromRect = fromEl.getBoundingClientRect();
+  bolt.style.left = (fromRect.left + fromRect.width/2 - 11) + 'px';
+  bolt.style.top = (fromRect.top + fromRect.height/2 - 11) + 'px';
+  bolt.style.transition = 'none';
+  document.body.appendChild(bolt);
+
+  // 强制回流确保初始位置生效
+  bolt.offsetHeight;
+
+  const toRect = toZombieEl.getBoundingClientRect();
+  const endX = toRect.left + toRect.width/2 - 11;
+  const endY = toRect.top + toRect.height/2 - 11;
+  const dx = endX - parseFloat(bolt.style.left);
+  const dy = endY - parseFloat(bolt.style.top);
+  const dist = Math.sqrt(dx*dx + dy*dy);
+  const dur = Math.max(200, Math.min(500, dist / 1.5));
+
+  // 使用 CSS transition 驱动飞行
+  bolt.style.transition = `left ${dur}ms cubic-bezier(.17,.67,.41,1), top ${dur}ms cubic-bezier(.17,.67,.41,1)`;
+  bolt.style.left = endX + 'px';
+  bolt.style.top = endY + 'px';
+
+  // 飞行结束后触发命中
+  setTimeout(()=>{
+    bolt.remove();
+    if(onHit) onHit();
+  }, dur + 10);
+}
+
+/* 冲击波爆炸效果 */
+function spawnImpactBurst(targetEl){
+  if(!targetEl) return;
+  const burst = document.createElement('div');
+  burst.className = 'impact-burst';
+  const r = targetEl.getBoundingClientRect();
+  const scene = document.getElementById('gardenScene');
+  const sceneR = scene.getBoundingClientRect();
+  burst.style.position = 'absolute';
+  burst.style.left = (r.left + r.width/2 - sceneR.left) + 'px';
+  burst.style.top = (r.top + r.height/2 - sceneR.top) + 'px';
+  scene.appendChild(burst);
+  setTimeout(()=>burst.remove(), 500);
+}
+
+/* 画面震动 */
+function shakeScene(){
+  const scene = document.getElementById('gardenScene');
+  if(!scene) return;
+  scene.classList.add('shake');
+  setTimeout(()=>scene.classList.remove('shake'), 400);
+}
+
+/* 僵尸吃掉一个植物 */
+function eatPlant(z){
+  if(state.plants.length === 0) return;
+  // 吃掉最后一个植物
+  const eatenId = state.plants[state.plants.length - 1];
+  const p = PLANT_LIBRARY.find(x=>x.id===eatenId) || (state.customPlants||[]).find(x=>x.id===eatenId);
+  // 动画
+  const scene = document.getElementById('gardenScene');
+  const plantEls = scene.querySelectorAll('.plant-item');
+  const lastEl = plantEls[plantEls.length - 1];
+  if(lastEl){
+    lastEl.classList.add('eaten');
+    setTimeout(()=>{ if(lastEl.parentNode) lastEl.remove(); }, 600);
+  }
+  state.plants.pop();
+  showBattleLog(`🧟 僵尸吃掉了${p?p.name:'植物'}！快完成任务夺回！`);
+  saveData();
+  // 延迟重新渲染植物列表
+  setTimeout(()=>{
+    if(state.tab === 'garden') {
+      const row = document.getElementById('plantsRow');
+      row.innerHTML = state.plants.map(pid => {
+        const pp = PLANT_LIBRARY.find(x=>x.id===pid) || (state.customPlants||[]).find(x=>x.id===pid);
+        if(!pp) return '';
+        return `<div class="plant-item" data-pid="${pid}" onclick="toast('${pp.name}：${pp.desc}')">${pp.emoji}<span class="label">${pp.name}</span></div>`;
+      }).join('') || '<div style="color:#fff;font-size:12px;opacity:0.7;align-self:center;margin-right:auto;padding-left:12px;">植物被吃光了！快完成任务～</div>';
+      if(window.twemoji){ try{ twemoji.parse(row, {folder:'svg', ext:'.svg'}); }catch(e){} }
+    }
+  }, 650);
+}
+
+/* 战斗日志 */
+function showBattleLog(msg){
+  const el = document.getElementById('battleLog');
+  if(!el) return;
+  el.textContent = msg;
+  el.classList.remove('show');
+  void el.offsetWidth; // 触发重排重启动画
+  el.classList.add('show');
+}
+
+/* 阳光飘字 + 计数器跳动 */
+function flySun(n, fromEl){
+  // 在指定元素位置飞出"+N阳光"
+  const float = document.createElement('div');
+  float.className = 'sun-float';
+  float.textContent = `+${n} ☀️`;
+  let x = window.innerWidth/2, y = window.innerHeight/2;
+  if(fromEl){
+    const r = fromEl.getBoundingClientRect();
+    x = r.left + r.width/2 - 20;
+    y = r.top;
+  }
+  float.style.left = x + 'px';
+  float.style.top = y + 'px';
+  document.body.appendChild(float);
+  setTimeout(()=>float.remove(), 1400);
+  // 计数器跳动
+  const meter = document.querySelector('.sun-meter');
+  if(meter){
+    meter.classList.add('bump');
+    setTimeout(()=>meter.classList.remove('bump'), 500);
+  }
+}
+
+let currentFilter = '全部';
+function setFilter(c){ currentFilter = c; renderGarden(); }
+
+function toggleTask(id){
+  const t = state.tasks.find(x=>x.id===id);
+  if(!t) return;
+  t.done = !t.done;
+  if(t.done){
+    state.sun += t.sun;
+    // 找到对应僵尸实体
+    const zombie = zombieEntities.find(z=>z.taskId === id);
+    const taskEl = event && event.target ? event.target.closest('.task-item') : null;
+
+    if(zombie && !zombie.defeated){
+      // 打击效果：阳光炮弹从任务卡片飞向僵尸
+      defeatZombie(zombie, `🎯 「${t.name}」完成！僵尸被击退！`, taskEl);
+    }
+
+    // 阳光飘字
+    flySun(t.sun, taskEl);
+    toast(`🎉 完成「${t.name}」+${t.sun}阳光！`);
+
+    // 检查是否所有任务完成
+    if(state.tasks.every(x=>x.done)){
+      setTimeout(()=>toast('🌟 花园安全了！僵尸被全部击退！'), 900);
+    }
+  }else{
+    state.sun = Math.max(0, state.sun - t.sun);
+  }
+  render();
+}
+
+function delTask(id){
+  state.tasks = state.tasks.filter(t=>t.id!==id);
+  render();
+  toast('已删除');
+}
+
+/* 种植植物（孩子端消费阳光值） */
+function plantSeed(id){
+  // 先从标准库找，再找自定义
+  const p = [...PLANT_LIBRARY, ...(state.customPlants||[])].find(x=>x.id===id);
+  if(!p) return;
+  if(state.plants.includes(id)){ toast('已经种植啦'); return; }
+  if(state.sun < p.cost){ toast(`阳光不足，还需 ${p.cost-state.sun} ☀️`); return; }
+  state.sun -= p.cost;
+  state.plants.push(id);
+  render();
+  toast(`🌱 种下了「${p.name}」！花园又多了一位守护者～`);
+}
+
+/* 打开种植弹窗（自定义植物） */
+function openPlantModal(){
+  const iconOptions = ['🌻','🌵','🌸','🌹','🍀','🌿','🌺','🍄','🌾','🎋','🪴','💐','🌼','🥀','🪷','🌲','🌳','🍃','🌷','🪻'];
+  openModal(`<h3>🌱 种植新植物</h3>
+    <div class="form-group"><label>植物名称</label><input id="cpName" placeholder="给你的植物起个名字"></div>
+    <div class="form-group"><label>图标</label>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;" id="iconPicker">
+        ${iconOptions.map((ico,i) => `<span style="font-size:26px;padding:4px;border-radius:8px;cursor:pointer;border:2px solid transparent;" data-ico="${ico}" onclick="pickIcon(this,'${ico}')">${ico}</span>`).join('')}
+      </div>
+      <input type="file" id="cpImage" accept="image/*" style="font-size:12px;margin-top:4px;" onchange="previewCustomIcon()">
+      <div id="cpPreview" style="margin-top:4px;font-size:12px;color:var(--text-l);">或上传自己的图片作为图标</div>
+    </div>
+    <div class="form-group"><label>描述</label><input id="cpDesc" placeholder="如：专注学习的好伙伴"></div>
+    <div class="form-group"><label>所需阳光</label><input id="cpCost" type="number" value="30" min="10" max="200"></div>
+    <input type="hidden" id="cpIcon" value="🌱">
+    <button class="btn btn-primary btn-full" onclick="addCustomPlant()">🌱 种植</button>`);
+}
+
+function pickIcon(el, ico){
+  document.querySelectorAll('#iconPicker span').forEach(s=>s.style.borderColor='transparent');
+  el.style.borderColor='var(--green-d)';
+  document.getElementById('cpIcon').value = ico;
+  document.getElementById('cpImage').value = '';
+}
+
+function previewCustomIcon(){
+  const file = document.getElementById('cpImage').files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    document.getElementById('cpPreview').innerHTML = `<img src="${e.target.result}" style="width:40px;height:40px;border-radius:8px;object-fit:cover;"> 已选择图片`;
+    document.getElementById('cpIcon').value = 'IMG:'+e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function addCustomPlant(){
+  const name = document.getElementById('cpName').value.trim();
+  if(!name){ toast('请输入植物名称'); return; }
+  const desc = document.getElementById('cpDesc').value.trim();
+  const cost = parseInt(document.getElementById('cpCost').value)||30;
+  const icon = document.getElementById('cpIcon').value;
+  const id = 'cp_'+uid();
+  if(!state.customPlants) state.customPlants = [];
+  state.customPlants.push({ id, name, emoji:icon, desc, cost, habit:'custom' });
+  closeModal();
+  // 如果阳光足够，直接种植
+  if(state.sun >= cost){
+    state.sun -= cost;
+    state.plants.push(id);
+    render();
+    toast(`🌱 种下了「${name}」！`);
+  }else{
+    render();
+    toast(`「${name}」已加入图鉴，攒够 ${cost} ☀️ 阳光就能种啦！`);
+  }
+}
+
+/* ---- 情绪 ---- */
+let currentMood = null;
+function selectMood(el, emoji, name){
+  document.querySelectorAll('.mood-btn').forEach(b=>b.classList.remove('sel'));
+  el.classList.add('sel');
+  currentMood = { emoji, name, time:Date.now() };
+  showMoodAdvice(name);
+}
+function showMoodAdvice(name){
+  const advices = {
+    '开心': { title:'🌈 太棒啦！', text:'保持这份好心情，今天的学习效率会很高哦！可以趁现在挑战一个难一点的任务～' },
+    '一般': { title:'🌿 平平淡淡也是真', text:'状态还行，先用番茄钟开始一个小任务吧，开始就是成功的一半！' },
+    '有点累': { title:'☕ 辛苦啦', text:'你已经坚持很久了，要不要先休息5分钟，喝口水、伸个懒腰，再继续？不用着急，慢慢来～' },
+    '难过': { title:'🤗 抱抱你', text:'遇到不开心的事了吗？没关系，每个人都有难过的时候。可以写进情绪树洞，或者和爸爸妈妈聊聊。你已经很棒了！' },
+    '生气': { title:'🌬️ 深呼吸', text:'生气是正常的情绪。试试吸气4秒、憋气4秒、呼气4秒。等平静下来，再面对任务会轻松很多～' },
+  };
+  const a = advices[name] || advices['一般'];
+  const el = document.getElementById('moodAdvice');
+  el.innerHTML = `<div class="mood-card">
+    <div class="mc-title">${a.title}</div>
+    <div class="mc-text">${a.text}</div>
+    <button class="btn btn-primary" style="margin-top:10px;" onclick="recordMood()">记下心情</button>
+  </div>`;
+
+  // 持续负面情绪，记录待提醒家长
+  if(['有点累','难过','生气'].includes(name)){
+    state.moods.push({ emoji, name, time:Date.now() });
+    if(state.moods.filter(m=>['有点累','难过','生气'].includes(m.name) && Date.now()-m.time < 86400000).length >= 2){
+      // 标记需要家长提醒
+      state._needParentAlert = true;
+    }
+    saveData();
+  }
+}
+function recordMood(){
+  if(!currentMood){ toast('请先选择心情'); return; }
+  state.moods.push(currentMood);
+  saveData();
+  toast('💌 心情已记录');
+  renderMood();
+}
+function renderMood(){
+  const list = document.getElementById('feelingList');
+  const feelings = state.feelings || [];
+  list.innerHTML = feelings.length === 0 ? '' :
+    feelings.slice(-5).reverse().map(f => `
+      <div class="feeling-item">${f.text}<div class="f-time">${fmtTime(f.time)}</div></div>
+    `).join('');
+}
+function saveFeeling(){
+  const v = document.getElementById('treeHoleInput').value.trim();
+  if(!v){ toast('写点什么再投递吧'); return; }
+  state.feelings.push({ text:v, time:Date.now() });
+  document.getElementById('treeHoleInput').value = '';
+  saveData();
+  toast('🌳 已投递到树洞，它会替你保守秘密');
+  renderMood();
+}
+
+/* ---- 成长手册 ---- */
+let pomoTimer = null;
+function setPomoMode(mode){
+  state.pomo.mode = mode;
+  state.pomo.remaining = (mode==='work'?25:5)*60;
+  state.pomo.running = false;
+  clearInterval(pomoTimer);
+  updatePomoUI();
+  saveData();
+}
+function togglePomo(){
+  if(state.pomo.running){
+    state.pomo.running = false;
+    clearInterval(pomoTimer);
+  }else{
+    state.pomo.running = true;
+    pomoTimer = setInterval(()=>{
+      state.pomo.remaining--;
+      if(state.pomo.remaining <= 0){
+        clearInterval(pomoTimer);
+        state.pomo.running = false;
+        if(state.pomo.mode === 'work'){
+          state.pomo.count++;
+          state.pomo.todayFocus += 25;
+          state.sun += 10;
+          toast('🍅 番茄完成！+10阳光，休息一下吧～');
+          // 解锁向日葵条件检查
+          checkHabitUnlock('focus');
+          state.pomo.mode = 'rest';
+          state.pomo.remaining = 5*60;
+        }else{
+          toast('休息结束，继续加油！');
+          state.pomo.mode = 'work';
+          state.pomo.remaining = 25*60;
+        }
+        saveData();
+      }
+      updatePomoUI();
+    }, 1000);
+  }
+  updatePomoUI();
+  saveData();
+}
+function resetPomo(){
+  clearInterval(pomoTimer);
+  state.pomo.running = false;
+  state.pomo.remaining = (state.pomo.mode==='work'?25:5)*60;
+  updatePomoUI();
+  saveData();
+}
+function updatePomoUI(){
+  const total = (state.pomo.mode==='work'?25:5)*60;
+  const r = state.pomo.remaining;
+  const m = Math.floor(r/60).toString().padStart(2,'0');
+  const s = (r%60).toString().padStart(2,'0');
+  document.getElementById('pomoTime').textContent = `${m}:${s}`;
+  document.getElementById('pomoState').textContent = state.pomo.running ? (state.pomo.mode==='work'?'专注中…':'休息中…') : '准备开始';
+  const circle = document.getElementById('pomoCircle');
+  const ratio = r/total;
+  circle.style.strokeDashoffset = 502*(1-ratio);
+  circle.style.stroke = state.pomo.mode==='work' ? '#5BB73A' : '#4FC3F7';
+  document.getElementById('pomoStartBtn').innerHTML = state.pomo.running ? '⏸️ 暂停' : '▶️ 开始';
+  document.getElementById('modeWork').classList.toggle('active', state.pomo.mode==='work');
+  document.getElementById('modeRest').classList.toggle('active', state.pomo.mode==='rest');
+  document.getElementById('todayFocus').textContent = state.pomo.todayFocus;
+  document.getElementById('pomoCount').textContent = state.pomo.count;
+}
+
+function renderGrowth(){
+  updatePomoUI();
+  // 能力图谱
+  const abilities = computeAbilities();
+  const colors = ['#5BB73A','#4FC3F7','#FF8C42','#B388FF','#FFD93D','#FF6B9D'];
+  document.getElementById('abilityChart').innerHTML = abilities.map((a,i) => `
+    <div class="ability-item">
+      <div class="ability-head"><span>${a.emoji} ${a.name}</span><span>${a.value}%</span></div>
+      <div class="ability-bar"><div class="ability-fill" style="width:${a.value}%;background:${colors[i%colors.length]};"></div></div>
+    </div>`).join('');
+
+  // 目标
+  const gl = document.getElementById('goalList');
+  gl.innerHTML = state.goals.length===0 ? '<div class="empty"><div class="e-ico">🎯</div>还没有目标</div>' :
+    state.goals.map(g => {
+      const pct = Math.min(100, Math.round(g.cur/g.target*100));
+      return `<div class="goal-item">
+        <svg class="goal-progress" viewBox="0 0 40 40">
+          <circle cx="20" cy="20" r="16" fill="none" stroke="#E8F5E9" stroke-width="4"/>
+          <circle cx="20" cy="20" r="16" fill="none" stroke="#5BB73A" stroke-width="4" stroke-linecap="round"
+            stroke-dasharray="${2*Math.PI*16}" stroke-dashoffset="${2*Math.PI*16*(1-pct/100)}" transform="rotate(-90 20 20)"/>
+          <text x="20" y="24" text-anchor="middle" font-size="10" font-weight="700" fill="#5BB73A">${pct}%</text>
+        </svg>
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:600;">${g.name}</div>
+          <div style="font-size:11px;color:var(--text-l);">${g.cur}/${g.target} ${g.unit}</div>
+        </div>
+        <button class="btn btn-ghost" style="padding:4px 10px;font-size:12px;" onclick="incGoal('${g.id}')">+1</button>
+      </div>`;
+    }).join('');
+
+  // 错题
+  const wl = document.getElementById('wrongList');
+  wl.innerHTML = state.wrongs.length===0 ? '<div class="empty"><div class="e-ico">📝</div>暂无错题，继续保持！</div>' :
+    state.wrongs.map(w => `
+      <div class="wrong-item ${w.fixed?'fixed':''}">
+        <div class="w-q">${w.q}</div>
+        <div class="w-a">✗ ${w.a}</div>
+        <span class="w-tag">${w.fixed?'已订正':w.subject}</span>
+        ${!w.fixed?`<button class="btn btn-primary" style="float:right;padding:4px 10px;font-size:11px;margin-top:-4px;" onclick="fixWrong('${w.id}')">标记订正 +5☀️</button>`:''}
+      </div>`).join('');
+}
+function computeAbilities(){
+  // 根据 任务完成、错题、专注 等 估算能力
+  const tasks = state.tasks;
+  const byCat = {};
+  tasks.forEach(t => { byCat[t.cat] = (byCat[t.cat]||0) + (t.done?1:0); });
+  const totalDone = tasks.filter(t=>t.done).length || 1;
+  const fixed = state.wrongs.filter(w=>w.fixed).length;
+  const wrongTotal = state.wrongs.length || 1;
+  const fixRate = Math.round(fixed/wrongTotal*100);
+  const focus = Math.min(100, state.pomo.todayFocus*2);
+  return [
+    { emoji:'🧮', name:'数学计算', value: Math.min(100, (byCat['数学']||0)*25 + fixRate*0.3) | 0 },
+    { emoji:'📖', name:'语文阅读', value: Math.min(100, (byCat['语文']||0)*25 + (byCat['阅读']||0)*25) | 0 },
+    { emoji:'🔤', name:'英语单词', value: Math.min(100, (byCat['英语']||0)*30) | 0 },
+    { emoji:'⏱️', name:'专注时长', value: focus },
+    { emoji:'📝', name:'错题订正', value: fixRate },
+    { emoji:'📚', name:'阅读习惯', value: Math.min(100, (byCat['阅读']||0)*30) | 0 },
+  ];
+}
+function incGoal(id){
+  const g = state.goals.find(x=>x.id===id);
+  if(!g) return;
+  g.cur = Math.min(g.target, g.cur+1);
+  if(g.cur >= g.target){
+    toast(`🎉 目标「${g.name}」达成！`);
+    state.sun += 30;
+    checkHabitUnlock('goal');
+  }else{
+    toast('+1');
+  }
+  render();
+}
+function fixWrong(id){
+  const w = state.wrongs.find(x=>x.id===id);
+  if(!w) return;
+  w.fixed = true;
+  state.sun += 5;
+  checkHabitUnlock('fixwrong');
+  render();
+  toast('✓ 已订正 +5阳光');
+}
+function checkHabitUnlock(habit){
+  const candidates = PLANT_LIBRARY.filter(p=>p.habit===habit && !state.plants.includes(p.id));
+  // 自动解锁提示，不强制
+  // 此处仅提示，需手动购买
+}
+
+/* ---- 亲子空间站 ---- */
+function renderParent(){
+  // 小纸条
+  const nl = document.getElementById('noteList');
+  nl.innerHTML = state.notes.length===0 ? '<div class="empty" style="padding:16px;"><div class="e-ico">💌</div>还没有鼓励小纸条</div>' :
+    state.notes.slice(-5).reverse().map(n => `
+      <div class="note-item">
+        <div class="n-from">来自 ${n.from||'家长'} · ${fmtTime(n.time)}</div>
+        <div class="n-text">${n.text}</div>
+      </div>`).join('');
+
+  // 亲子任务
+  const pl = document.getElementById('parentTaskList');
+  pl.innerHTML = state.parentTasks.length===0 ? '<div class="empty" style="padding:16px;"><div class="e-ico">🤝</div>还没有亲子任务</div>' :
+    state.parentTasks.map(t => `
+      <div class="task-item">
+        <div class="task-check ${t.done?'done':''}" onclick="toggleParentTask('${t.id}')">${t.done?'✓':''}</div>
+        <div class="task-info">
+          <div class="task-name ${t.done?'done':''}">${t.emoji||'🤝'} ${t.name}</div>
+          <div class="task-meta"><span class="badge badge-orange">亲子</span><span class="task-sun">☀️ +${t.sun}</span></div>
+        </div>
+        <span class="task-del" onclick="delParentTask('${t.id}')">🗑️</span>
+      </div>`).join('');
+}
+
+/* 奖励兑换渲染（孩子端+家长端共用阳光兑换站） */
+function renderRewards(){
+  const rl = document.getElementById('rewardList');
+  if(!rl) return;
+  const isChild = state.role === 'child';
+  const redeemed = state.redeemed || [];
+
+  // 提示文案和按钮根据角色切换
+  const hint = document.getElementById('rewardHint');
+  if(hint) hint.textContent = isChild ? '用阳光值兑换现实奖励，兑换后让家长兑现～' : '预设现实奖励，孩子可用阳光值兑换';
+
+  const addBtn = document.getElementById('btnAddReward');
+  if(addBtn) addBtn.style.display = isChild ? 'none' : '';
+
+  let html = '';
+
+  // 待兑换奖励列表
+  if(state.rewards.length === 0){
+    html += '<div class="empty" style="padding:16px;"><div class="e-ico">🎁</div>还没有奖励</div>';
+  } else {
+    html += state.rewards.map(r => `
+      <div class="reward-item">
+        <div class="r-icon">${r.icon||'🎁'}</div>
+        <div class="r-info">
+          <div class="r-name">${r.name}</div>
+          <div class="r-cost">☀️ ${r.cost} 阳光</div>
+        </div>
+        ${isChild
+          ? `<button class="r-btn" ${state.sun<r.cost?'disabled':''} onclick="redeemReward('${r.id}')">兑换</button>`
+          : `<span class="task-del" onclick="delReward('${r.id}')">🗑️</span>`
+        }
+      </div>`).join('');
+  }
+
+  // 已兑换记录
+  if(redeemed.length > 0){
+    html += '<div style="margin-top:12px;padding-top:12px;border-top:1px dashed #E0E0E0;">';
+    html += '<div style="font-size:12px;font-weight:600;color:var(--text-l);margin-bottom:8px;">📋 兑换记录</div>';
+    html += redeemed.slice().reverse().map(r => {
+      const timeStr = new Date(r.time).toLocaleDateString('zh-CN', {month:'short',day:'numeric'});
+      const statusTag = r.fulfilled
+        ? '<span style="background:#E8F5E9;color:#2E7D32;padding:2px 6px;border-radius:4px;font-size:11px;">已兑现 ✓</span>'
+        : `<span style="background:#FFF3E0;color:#E65100;padding:2px 6px;border-radius:4px;font-size:11px;">待兑现</span>`;
+      const fulfillBtn = (!isChild && !r.fulfilled)
+        ? `<button class="r-btn" style="font-size:11px;padding:4px 8px;white-space:nowrap;" onclick="fulfillReward('${r.id}')">已兑现</button>`
+        : '';
+      return `
+        <div class="reward-item" style="opacity:${r.fulfilled?0.6:1};">
+          <div class="r-icon" style="font-size:22px;">${r.icon||'🎁'}</div>
+          <div class="r-info">
+            <div class="r-name" style="font-size:13px;">${r.name} <span style="font-size:11px;color:var(--text-l);">${timeStr}</span></div>
+            <div class="r-cost" style="display:flex;align-items:center;gap:6px;">☀️ ${r.cost} ${statusTag}</div>
+          </div>
+          ${fulfillBtn}
+        </div>`;
+    }).join('');
+    html += '</div>';
+  }
+
+  rl.innerHTML = html;
+}
+
+function sendNote(){
+  const v = document.getElementById('noteInput').value.trim();
+  if(!v){ toast('写点什么吧'); return; }
+  state.notes.push({ text:v, from:'家长', time:Date.now() });
+  document.getElementById('noteInput').value = '';
+  render();
+  toast('💌 小纸条已送达');
+}
+function redeemReward(id){
+  const r = state.rewards.find(x=>x.id===id);
+  if(!r) return;
+  if(state.sun < r.cost){ toast('阳光不足'); return; }
+  state.sun -= r.cost;
+  // 保存兑换记录
+  if(!state.redeemed) state.redeemed = [];
+  state.redeemed.push({ id:uid(), name:r.name, icon:r.icon, cost:r.cost, time:Date.now(), fulfilled:false });
+  state.rewards = state.rewards.filter(x=>x.id!==id);
+  render();
+  toast(`🎉 兑换成功！「${r.name}」请家长兑现～`);
+}
+function fulfillReward(id){
+  const r = (state.redeemed||[]).find(x=>x.id===id);
+  if(!r) return;
+  r.fulfilled = true;
+  r.fulfilledTime = Date.now();
+  render();
+  toast('✅ 已标记为已兑现');
+}
+function delReward(id){
+  state.rewards = state.rewards.filter(x=>x.id!==id);
+  render();
+  toast('已删除');
+}
+function toggleParentTask(id){
+  const t = state.parentTasks.find(x=>x.id===id);
+  if(!t) return;
+  t.done = !t.done;
+  if(t.done){ state.sun += t.sun; toast(`亲子任务完成 +${t.sun}阳光`); checkHabitUnlock('parent'); }
+  render();
+}
+function delParentTask(id){ state.parentTasks = state.parentTasks.filter(t=>t.id!==id); render(); }
+
+/* ---- 成长报告 ---- */
+function renderReport(){
+  const doneTasks = state.tasks.filter(t=>t.done).length;
+  const fixedWrong = state.wrongs.filter(w=>w.fixed).length;
+  document.getElementById('repTask').textContent = doneTasks;
+  document.getElementById('repFocus').textContent = state.pomo.todayFocus;
+  document.getElementById('repWrong').textContent = fixedWrong;
+  document.getElementById('repSun').textContent = state.sun;
+
+  // 情绪
+  const recentMoods = state.moods.filter(m=>Date.now()-m.time < 7*86400000);
+  const moodEl = document.getElementById('repMood');
+  if(recentMoods.length === 0){
+    moodEl.textContent = '本周暂无情绪记录';
+  }else{
+    const counts = {};
+    recentMoods.forEach(m => counts[m.name] = (counts[m.name]||0)+1);
+    moodEl.innerHTML = Object.entries(counts).map(([k,v]) => `<span class="badge badge-blue" style="margin-right:6px;">${k} ×${v}</span>`).join('');
+  }
+
+  // 教育建议
+  const advices = [];
+  if(state.pomo.todayFocus >= 50){
+    advices.push('✅ 孩子本周专注时长表现优秀，建议继续保持25+5学习法的节奏。');
+  }else if(state.pomo.todayFocus > 0){
+    advices.push('💡 孩子已开始使用番茄钟，可适当鼓励延长专注时间，从15分钟逐步过渡到25分钟。');
+  }else{
+    advices.push('⏰ 建议引导孩子尝试番茄钟，从短时专注开始建立习惯。');
+  }
+  if(state.wrongs.length > 0){
+    const rate = Math.round(fixedWrong/state.wrongs.length*100);
+    if(rate < 50){
+      advices.push('📝 孩子错题订正率较低，建议和孩子一起分析错题原因，避免反复出错。');
+    }else{
+      advices.push('👍 错题订正情况良好，可鼓励孩子主动整理错题本。');
+    }
+  }
+  const negMoods = recentMoods.filter(m=>['有点累','难过','生气'].includes(m.name)).length;
+  if(negMoods >= 2){
+    advices.push('💖 孩子近期多次出现负面情绪，建议多陪伴聊天，避免催促，关注心理状态。');
+  }
+  if(state.tasks.length > 0 && doneTasks/state.tasks.length >= 0.8){
+    advices.push('🌟 任务完成率高，孩子自主性正在建立，可适当给予现实奖励强化。');
+  }
+  document.getElementById('repAdvice').innerHTML = advices.map(a => `<div class="advice-item">${a}</div>`).join('');
+}
+
+/* ===================== 导航 ===================== */
+function switchTab(id){ state.tab = id; render(); }
+/* 默认家长密码，家长可在亲子空间站修改 */
+const PARENT_PASSWORD_KEY = 'sunshine_parent_pwd';
+function getParentPassword(){ return localStorage.getItem(PARENT_PASSWORD_KEY) || '1234'; }
+function setParentPassword(pwd){ localStorage.setItem(PARENT_PASSWORD_KEY, pwd); }
+
+function switchRole(){
+  // 孩子切家长需要密码
+  if(state.role === 'child'){
+    openPasswordModal();
+  }else{
+    // 家长切孩子直接切
+    state.role = 'child';
+    state.tab = 'garden';
+    render();
+  }
+}
+
+function openPasswordModal(){
+  openModal(`<h3>🔐 家长验证</h3>
+    <p style="font-size:13px;color:var(--text-l);text-align:center;margin-bottom:12px;">请输入家长密码才能切换到家长端</p>
+    <div class="form-group"><input id="pwdInput" type="password" placeholder="请输入密码" autofocus></div>
+    <p id="pwdError" style="font-size:12px;color:var(--red);text-align:center;display:none;">密码错误，请重试</p>
+    <button class="btn btn-primary btn-full" onclick="verifyPassword()">验证</button>
+    <button class="btn btn-ghost btn-full" onclick="closeModal()" style="margin-top:8px;">取消</button>
+    <p style="font-size:11px;color:var(--text-l);text-align:center;margin-top:12px;">💡 忘记密码？请在亲子空间站 → 成长报告中修改</p>`);
+  setTimeout(()=>{ const inp = document.getElementById('pwdInput'); if(inp) inp.focus(); }, 200);
+}
+
+function verifyPassword(){
+  const input = document.getElementById('pwdInput').value.trim();
+  if(input === getParentPassword()){
+    closeModal();
+    state.role = 'parent';
+    state.tab = 'parent';
+    render();
+    toast('✅ 已切换到家长端');
+  }else{
+    const err = document.getElementById('pwdError');
+    if(err) err.style.display = 'block';
+  }
+}
+
+function changePassword2(){
+  const np = document.getElementById('newPwdInput2').value.trim();
+  if(!np){ toast('请输入新密码'); return; }
+  setParentPassword(np);
+  document.getElementById('newPwdInput2').value = '';
+  toast('✅ 密码已修改');
+}
+
+/* 数据导出：保存为 JSON 文件下载到本地 */
+function exportData(){
+  saveData(); // 先保存最新数据
+  const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+  // 同时备份密码
+  data._parentPwd = getParentPassword();
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const now = new Date();
+  const ts = now.getFullYear()+'-'+(now.getMonth()+1)+'-'+now.getDate();
+  a.download = '阳光花园备份_'+ts+'.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('✅ 数据已导出，请保存好备份文件！');
+  // 更新备份时间提示
+  updateBackupInfo();
+}
+
+/* 数据导入：从 JSON 文件恢复 */
+function importData(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const data = JSON.parse(e.target.result);
+      // 恢复密码
+      if(data._parentPwd){
+        setParentPassword(data._parentPwd);
+        delete data._parentPwd;
+      }
+      // 恢复数据
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      state = Object.assign({}, defaultData, data);
+      toast('✅ 数据恢复成功！刷新页面即可看到。');
+      // 刷新页面以重新加载
+      setTimeout(()=>{ location.reload(); }, 1000);
+    }catch(err){
+      toast('❌ 文件格式不正确，请选择有效的备份文件');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = ''; // 允许重复导入同一文件
+}
+
+/* 更新备份信息提示 */
+function updateBackupInfo(){
+  const el = document.getElementById('backupInfo');
+  if(!el) return;
+  const s = localStorage.getItem(STORAGE_KEY);
+  if(!s){ el.textContent = ''; return; }
+  const tasks = state.tasks?.length || 0;
+  const plants = state.plants?.length || 0;
+  const moods = (state.moods?.length || 0) + (state.feelings?.length || 0);
+  const redeemed = (state.redeemed?.length || 0);
+  el.innerHTML = '当前数据：'+tasks+'个任务 · '+plants+'个植物 · '+moods+'条情绪 · '+redeemed+'条兑换 · ☀️'+state.sun;
+}
+// 家长端渲染后刷新备份信息
+const origRenderParent = renderParent;
+renderParent = function(){
+  origRenderParent();
+  setTimeout(updateBackupInfo, 200);
+};
+
+/* ===================== 模态框 ===================== */
+function openModal(html){
+  document.getElementById('modalContent').innerHTML = `<span class="close-x" onclick="closeModal()">✕</span>${html}`;
+  document.getElementById('modalMask').classList.add('show');
+}
+function closeModal(){ document.getElementById('modalMask').classList.remove('show'); }
+function closeModalOnMask(e){ if(e.target.id==='modalMask') closeModal(); }
+
+function openTaskModal(){
+  openModal(`<h3>➕ 添加任务</h3>
+    <div class="form-group"><label>任务名称</label><input id="tName" placeholder="如：口算20题"></div>
+    <div class="form-group"><label>学科分类</label>
+      <select id="tCat"><option>语文</option><option>数学</option><option>英语</option><option>阅读</option><option>其他</option></select>
+    </div>
+    <div class="form-group"><label>阳光值</label><input id="tSun" type="number" value="20" min="5" max="100"></div>
+    <div class="form-group"><label>完成时限（僵尸逼近速度）</label>
+      <select id="tDeadline">
+        <option value="15">15 分钟 ⚡快</option>
+        <option value="30" selected>30 分钟 🏃中等</option>
+        <option value="45">45 分钟 🚶较慢</option>
+        <option value="60">60 分钟 🐢悠闲</option>
+      </select>
+      <div style="font-size:11px;color:var(--text-l);margin-top:4px;">时限越短，僵尸走得越快，阳光奖励越高</div>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="addTask()">添加任务</button>`);
+}
+function addTask(){
+  const name = document.getElementById('tName').value.trim();
+  if(!name){ toast('请输入任务名'); return; }
+  const cat = document.getElementById('tCat').value;
+  const sun = parseInt(document.getElementById('tSun').value)||20;
+  const deadlineMinutes = parseInt(document.getElementById('tDeadline').value)||30;
+  state.tasks.push({ id:uid(), name, cat, sun, done:false, createdAt:Date.now(), deadlineMinutes });
+  closeModal(); render();
+  toast(`任务已添加！${deadlineMinutes}分钟内完成，加油守护花园！`);
+}
+
+function openGoalModal(){
+  openModal(`<h3>🎯 设置成长目标</h3>
+    <div class="form-group"><label>目标名称</label><input id="gName" placeholder="如：每天阅读30分钟"></div>
+    <div class="form-group"><label>目标数值</label><input id="gTarget" type="number" value="7"></div>
+    <div class="form-group"><label>单位</label><input id="gUnit" placeholder="如：天 / % / 本" value="天"></div>
+    <button class="btn btn-primary btn-full" onclick="addGoal()">设置目标</button>`);
+}
+function addGoal(){
+  const name = document.getElementById('gName').value.trim();
+  if(!name){ toast('请输入目标'); return; }
+  const target = parseInt(document.getElementById('gTarget').value)||1;
+  const unit = document.getElementById('gUnit').value.trim() || '次';
+  state.goals.push({ id:uid(), name, cur:0, target, unit });
+  closeModal(); render();
+  toast('目标已设置，向着它努力吧！');
+}
+
+function openWrongModal(){
+  openModal(`<h3>📝 添加错题</h3>
+    <div class="form-group"><label>学科</label>
+      <select id="wSub"><option>数学</option><option>语文</option><option>英语</option><option>其他</option></select>
+    </div>
+    <div class="form-group"><label>题目</label><textarea id="wQ" placeholder="输入错题内容"></textarea></div>
+    <div class="form-group"><label>错误原因/正确答案</label><textarea id="wA" placeholder="如：计算错误，应为..."></textarea></div>
+    <button class="btn btn-primary btn-full" onclick="addWrong()">添加错题</button>`);
+}
+function addWrong(){
+  const sub = document.getElementById('wSub').value;
+  const q = document.getElementById('wQ').value.trim();
+  const a = document.getElementById('wA').value.trim();
+  if(!q){ toast('请输入题目'); return; }
+  state.wrongs.push({ id:uid(), subject:sub, q, a:a||'待补充', fixed:false, date:Date.now() });
+  closeModal(); render();
+  toast('错题已收录，订正后可获得阳光！');
+}
+
+function openRewardModal(){
+  openModal(`<h3>🎁 添加现实奖励</h3>
+    <div class="form-group"><label>奖励名称</label><input id="rName" placeholder="如：看30分钟电视"></div>
+    <div class="form-group"><label>图标</label>
+      <select id="rIcon"><option value="📺">📺 电视</option><option value="📚">📚 书籍</option><option value="🎢">🎢 游玩</option><option value="🎮">🎮 游戏</option><option value="🍦">🍦 零食</option><option value="🎁">🎁 礼物</option></select>
+    </div>
+    <div class="form-group"><label>所需阳光值</label><input id="rCost" type="number" value="50" min="10"></div>
+    <button class="btn btn-primary btn-full" onclick="addReward()">添加奖励</button>`);
+}
+function addReward(){
+  const name = document.getElementById('rName').value.trim();
+  if(!name){ toast('请输入奖励名称'); return; }
+  const icon = document.getElementById('rIcon').value;
+  const cost = parseInt(document.getElementById('rCost').value)||50;
+  state.rewards.push({ id:uid(), name, icon, cost });
+  closeModal(); render();
+  toast('奖励已添加');
+}
+
+function openParentTaskModal(){
+  openModal(`<h3>🤝 添加亲子任务</h3>
+    <div class="form-group"><label>任务名称</label><input id="pName" placeholder="如：和孩子一起读一本课外书"></div>
+    <div class="form-group"><label>亲子阳光值</label><input id="pSun" type="number" value="40" min="5"></div>
+    <button class="btn btn-primary btn-full" onclick="addParentTask()">添加任务</button>`);
+}
+function addParentTask(){
+  const name = document.getElementById('pName').value.trim();
+  if(!name){ toast('请输入任务名'); return; }
+  const sun = parseInt(document.getElementById('pSun').value)||40;
+  state.parentTasks.push({ id:uid(), name, sun, done:false, emoji:'🤝' });
+  closeModal(); render();
+  toast('亲子任务已添加');
+}
+
+/* ===================== 工具 ===================== */
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+function fmtTime(ts){
+  const d = new Date(ts);
+  const now = new Date();
+  if(d.toDateString() === now.toDateString()) return `今天 ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+  return `${d.getMonth()+1}/${d.getDate()} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+}
+
+/* ===================== 启动 ===================== */
+// 使用 Twemoji 渲染所有 emoji，保证所有浏览器和移动端正常显示
+if(window.twemoji){
+  twemoji.parse(document.body, { folder:'svg', ext:'.svg' });
+}
+// twemoji 加载是异步的，等待加载完成后再 parse
+window.addEventListener('load', () => {
+  if(window.twemoji){
+    twemoji.parse(document.body, { folder:'svg', ext:'.svg' });
+  }
+  // 监听 DOM 变化自动重新解析
+  if(window.MutationObserver){
+    const obs = new MutationObserver(() => {
+      if(window.twemoji){
+        twemoji.parse(document.body, { folder:'svg', ext:'.svg' });
+      }
+    });
+    obs.observe(document.body, { childList:true, subtree:true });
+  }
+});
+render();
+// 每日重置专注时长
+const today = new Date().toDateString();
+if(state.pomo.lastDate !== today){
+  state.pomo.lastDate = today;
+  state.pomo.todayFocus = 0;
+  saveData();
+}
+</script>
+</body>
+</html>
