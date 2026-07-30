@@ -7,6 +7,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#7ED957">
 <title>阳光花园守护计划</title>
+<link rel="icon" type="image/png" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="manifest" href="manifest.json">
 <script src="https://cdn.jsdelivr.net/npm/twemoji@14/dist/twemoji.min.js" crossorigin="anonymous"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -741,10 +744,16 @@
   <div class="view" id="view-parent">
     <div class="card">
       <div class="card-title"><span class="ico">💌</span>鼓励小纸条</div>
-      <p style="font-size:12px;color:var(--text-l);margin-bottom:8px;">给孩子写一句鼓励的话吧～</p>
-      <div style="display:flex;gap:8px;">
+      <p style="font-size:12px;color:var(--text-l);margin-bottom:8px;">给孩子写一句鼓励的话，还可以送阳光值哦～</p>
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
         <input type="text" id="noteInput" placeholder="例如：今天的字写得很工整！" style="flex:1;padding:10px;border:1.5px solid #E0E0E0;border-radius:10px;font-size:13px;">
         <button class="btn btn-primary" onclick="sendNote()">送出</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+        <span style="font-size:12px;color:var(--text-l);">附赠阳光：</span>
+        <button class="btn btn-sun" onclick="sendNoteWithSun(5)" style="padding:4px 8px;font-size:11px;">☀️+5</button>
+        <button class="btn btn-sun" onclick="sendNoteWithSun(10)" style="padding:4px 8px;font-size:11px;">☀️+10</button>
+        <button class="btn btn-sun" onclick="sendNoteWithSun(20)" style="padding:4px 8px;font-size:11px;">☀️+20</button>
       </div>
       <div style="margin-top:10px;" id="noteList"></div>
     </div>
@@ -766,22 +775,27 @@
 
     <div class="card" style="background:#E8F5E9;">
       <div class="card-title"><span class="ico">💾</span>数据备份</div>
-      <p style="font-size:12px;color:var(--text-l);margin-bottom:8px;">自动静默备份到云端 + 手动导出，清缓存不丢数据。</p>
-      <div style="display:flex;gap:8px;margin-bottom:10px;">
-        <button class="btn btn-primary" onclick="exportData()" style="flex:1;">📥 手动导出</button>
-        <button class="btn btn-ghost" onclick="document.getElementById('importFile').click()" style="flex:1;">📤 恢复备份</button>
+      <p style="font-size:12px;color:var(--text-l);margin-bottom:10px;">自动静默备份到云端 + 手动导出，清缓存不丢数据。</p>
+
+      <!-- 三按钮一行 -->
+      <div style="display:flex;gap:4px;margin-bottom:10px;">
+        <button class="btn btn-primary" onclick="exportData()" style="flex:1;font-size:12px;padding:6px 2px;border-radius:8px;">📥 导出</button>
+        <button class="btn btn-ghost" onclick="document.getElementById('importFile').click()" style="flex:1;font-size:12px;padding:6px 2px;border-radius:8px;border:1.5px solid #E0E0E0;">📤 本地恢复</button>
+        <button class="btn btn-ghost" onclick="importFromCloud()" style="flex:1;font-size:12px;padding:6px 2px;border-radius:8px;border:1.5px solid #E0E0E0;">☁️ 云端恢复</button>
       </div>
+
       <div style="background:#fff;border-radius:10px;padding:10px;font-size:12px;">
-        <div style="font-weight:600;margin-bottom:6px;color:var(--text);">☁️ 自动云备份（静默，无需操作）</div>
+        <div style="font-weight:600;margin-bottom:6px;color:var(--text);">⏱ 自动备份频率</div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
           <select id="autoBackupFreq" onchange="saveBackupSettings()" style="padding:6px 8px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:12px;">
-            <option value="off">关闭自动备份</option>
+            <option value="off">关闭</option>
             <option value="hourly">每小时</option>
             <option value="daily">每天</option>
             <option value="weekly">每周</option>
           </select>
           <span style="color:var(--text-l);font-size:11px;" id="backupStatus"></span>
         </div>
+        <div id="tokenSection" style="margin-top:8px;"></div>
       </div>
       <input type="file" id="importFile" accept=".json" style="display:none;" onchange="importData(event)">
       <div id="backupInfo" style="font-size:11px;color:var(--text-l);margin-top:6px;"></div>
@@ -1075,6 +1089,7 @@ function renderGarden(){
             ${cdHTML}
           </div>
         </div>
+        <span class="task-del" onclick="editTask('${t.id}')" style="${state.role==='child'?'display:none':''};margin-right:4px;">✏️</span>
         <span class="task-del" onclick="delTask('${t.id}')" style="${state.role==='child'?'display:none':''}">🗑️</span>
       </div>`}).join('');
   }
@@ -1100,8 +1115,8 @@ function renderGarden(){
     </div>`;
   }).join('') || '<div class="empty" style="padding:16px;"><div class="e-ico">🌱</div>还没有植物，快来种吧！</div>';
 
-  // 种植按钮：孩子端和家长端都可见
-  if(plantBtn) plantBtn.style.display = '';
+  // 种植按钮：仅家长端可见
+  if(plantBtn) plantBtn.style.display = isChild ? 'none' : '';
 }
 
 /* 启动战斗循环（僵尸行走+吃植物） */
@@ -1422,6 +1437,51 @@ function delTask(id){
   toast('已删除');
 }
 
+let editingTaskId = null;
+function editTask(id){
+  const t = state.tasks.find(x=>x.id===id);
+  if(!t) return;
+  editingTaskId = id;
+  const deadlineOptions = [
+    {v:15,label:'15 分钟 ⚡快'},
+    {v:30,label:'30 分钟 🏃中等'},
+    {v:45,label:'45 分钟 🚶较慢'},
+    {v:60,label:'60 分钟 🐢悠闲'},
+  ];
+  const sel = (v) => v === (t.deadlineMinutes||30) ? 'selected' : '';
+  openModal(`<h3>✏️ 编辑任务</h3>
+    <div class="form-group"><label>任务名称</label><input id="etName" value="${t.name}"></div>
+    <div class="form-group"><label>学科分类</label>
+      <select id="etCat">${['语文','数学','英语','阅读','其他'].map(c=>`<option value="${c}" ${t.cat===c?'selected':''}>${c}</option>`).join('')}</select>
+    </div>
+    <div class="form-group"><label>阳光值</label><input id="etSun" type="number" value="${t.sun}" min="5" max="100"></div>
+    <div class="form-group"><label>完成时限（僵尸逼近速度）</label>
+      <select id="etDeadline">${deadlineOptions.map(o=>`<option value="${o.v}" ${sel(o.v)}>${o.label}</option>`).join('')}</select>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="saveTask()">保存修改</button>
+    <button class="btn btn-ghost btn-full" onclick="closeModal()" style="margin-top:8px;">取消</button>`);
+}
+
+function saveTask(){
+  const t = state.tasks.find(x=>x.id===editingTaskId);
+  if(!t) return;
+  const name = document.getElementById('etName').value.trim();
+  if(!name){ toast('请输入任务名称'); return; }
+  t.name = name;
+  t.cat = document.getElementById('etCat').value;
+  t.sun = parseInt(document.getElementById('etSun').value)||20;
+  const newDeadline = parseInt(document.getElementById('etDeadline').value)||30;
+  t.deadlineMinutes = newDeadline;
+  // 重置任务创建时间，让倒计时和僵尸位置重新开始
+  t.createdAt = Date.now();
+  editingTaskId = null;
+  closeModal();
+  // 移除旧僵尸实体，render 时会重新创建从起点出发
+  zombieEntities = zombieEntities.filter(z => z.taskId !== t.id);
+  render();
+  toast(`✅ 已更新 · 时限 ${newDeadline} 分钟 · 僵尸已重置`);
+}
+
 /* 种植植物（孩子端消费阳光值） */
 function plantSeed(id){
   // 先从标准库找，再找自定义
@@ -1716,7 +1776,7 @@ function renderParent(){
   nl.innerHTML = state.notes.length===0 ? '<div class="empty" style="padding:16px;"><div class="e-ico">💌</div>还没有鼓励小纸条</div>' :
     state.notes.slice(-5).reverse().map(n => `
       <div class="note-item">
-        <div class="n-from">来自 ${n.from||'家长'} · ${fmtTime(n.time)}</div>
+        <div class="n-from">${n.from||'家长'} · ${fmtTime(n.time)}${n.sun ? ' · 附赠 ☀️+'+n.sun : ''}</div>
         <div class="n-text">${n.text}</div>
       </div>`).join('');
 
@@ -1799,10 +1859,20 @@ function renderRewards(){
 function sendNote(){
   const v = document.getElementById('noteInput').value.trim();
   if(!v){ toast('写点什么吧'); return; }
-  state.notes.push({ text:v, from:'家长', time:Date.now() });
+  state.notes.push({ text:v, from:'家长', time:Date.now(), sun:0 });
   document.getElementById('noteInput').value = '';
   render();
   toast('💌 小纸条已送达');
+}
+
+function sendNoteWithSun(n){
+  const v = document.getElementById('noteInput').value.trim();
+  if(!v){ toast('写点什么吧'); return; }
+  state.notes.push({ text:v, from:'家长', time:Date.now(), sun:n });
+  state.sun += n;
+  document.getElementById('noteInput').value = '';
+  render();
+  toast(`💌 小纸条已送达，+${n} ☀️ 阳光！`);
 }
 function redeemReward(id){
   const r = state.rewards.find(x=>x.id===id);
@@ -1957,11 +2027,17 @@ function exportData(){
 }
 
 /* 静默自动备份：通过 GitHub API 直接上传到仓库 */
-const GITHUB_BACKUP_TOKEN = 'YOUR_GITHUB_TOKEN_HERE';
+// Token 由用户设置，存在 localStorage 中，不硬编码在代码里
 const GITHUB_BACKUP_REPO = 'buptwds/sunshine-garden';
 const GITHUB_BACKUP_PATH = 'backups/auto-backup.json';
 
+function getBackupToken(){
+  return localStorage.getItem('sunshine_backup_token') || '';
+}
+
 async function autoBackupToCloud(){
+  const token = getBackupToken();
+  if(!token) return; // 未设置 token 则跳过
   try{
     saveData();
     const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
@@ -1974,7 +2050,7 @@ async function autoBackupToCloud(){
     let sha = '';
     try{
       const getResp = await fetch(`https://api.github.com/repos/${GITHUB_BACKUP_REPO}/contents/${GITHUB_BACKUP_PATH}`, {
-        headers: { 'Authorization': `Bearer ${GITHUB_BACKUP_TOKEN}`, 'Accept': 'application/vnd.github+json' }
+        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json' }
       });
       if(getResp.ok){ const j = await getResp.json(); sha = j.sha; }
     }catch(e){}
@@ -1985,7 +2061,7 @@ async function autoBackupToCloud(){
 
     const resp = await fetch(`https://api.github.com/repos/${GITHUB_BACKUP_REPO}/contents/${GITHUB_BACKUP_PATH}`, {
       method: 'PUT',
-      headers: { 'Authorization': `Bearer ${GITHUB_BACKUP_TOKEN}`, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github+json' },
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github+json' },
       body: JSON.stringify(body)
     });
 
@@ -2007,10 +2083,86 @@ function saveBackupSettings(){
   scheduleAutoBackup(freq);
   updateBackupStatus();
   if(freq !== 'off'){
+    const token = getBackupToken();
+    if(!token){
+      toast('⚠️ 请先输入 GitHub Token 再开启自动备份');
+      document.getElementById('autoBackupFreq').value = 'off';
+      localStorage.setItem('sunshine_backup_freq', 'off');
+      return;
+    }
     toast('☁️ 已开启自动云备份（'+{hourly:'每小时',daily:'每天',weekly:'每周'}[freq]+'）');
-    autoBackupToCloud(); // 立即备份一次
+    autoBackupToCloud();
   }else{
     toast('已关闭自动备份');
+  }
+}
+
+function saveBackupToken(){
+  const val = document.getElementById('backupTokenInput').value.trim();
+  if(!val){ toast('请输入 Token'); return; }
+  localStorage.setItem('sunshine_backup_token', val);
+  renderTokenSection();
+  toast('✅ Token 已保存');
+}
+
+function removeBackupToken(){
+  localStorage.removeItem('sunshine_backup_token');
+  renderTokenSection();
+  // 如果开启了自动备份，关掉
+  if((localStorage.getItem('sunshine_backup_freq')||'off') !== 'off'){
+    localStorage.setItem('sunshine_backup_freq', 'off');
+    scheduleAutoBackup('off');
+  }
+  updateBackupStatus();
+  toast('Token 已删除');
+}
+
+function renderTokenSection(){
+  const el = document.getElementById('tokenSection');
+  if(!el) return;
+  const token = getBackupToken();
+  if(token){
+    el.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;background:#E8F5E9;padding:8px 10px;border-radius:8px;">
+        <span style="font-size:11px;color:#2E7D32;flex:1;">✅ Token 已保存 · 备份目标：buptwds/sunshine-garden</span>
+        <button onclick="renderTokenInput()" style="background:none;border:none;font-size:11px;color:var(--text-l);cursor:pointer;">修改</button>
+        <button onclick="removeBackupToken()" style="background:none;border:none;font-size:11px;color:var(--red);cursor:pointer;">删除</button>
+      </div>`;
+  }else{
+    renderTokenInput();
+  }
+}
+
+function renderTokenInput(){
+  const el = document.getElementById('tokenSection');
+  if(!el) return;
+  el.innerHTML = `
+    <div style="display:flex;gap:6px;">
+      <input type="password" id="backupTokenInput" placeholder="输入 GitHub Token" style="flex:1;padding:6px 8px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:11px;">
+      <button class="btn btn-primary" onclick="saveBackupToken()" style="padding:6px 10px;font-size:11px;white-space:nowrap;">保存</button>
+    </div>
+    <div style="font-size:10px;color:var(--text-l);margin-top:4px;">Token 仅存本地，用于静默推送到 GitHub 仓库</div>`;
+}
+
+/* 从 GitHub 云备份恢复数据 */
+async function importFromCloud(){
+  const token = getBackupToken();
+  if(!token){ toast('请先设置 GitHub Token'); return; }
+  try{
+    const resp = await fetch(`https://api.github.com/repos/${GITHUB_BACKUP_REPO}/contents/${GITHUB_BACKUP_PATH}`, {
+      headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json' }
+    });
+    if(!resp.ok){ toast('未找到云备份文件'); return; }
+    const j = await resp.json();
+    const content = decodeURIComponent(escape(atob(j.content)));
+    const data = JSON.parse(content);
+    if(data._parentPwd){ setParentPassword(data._parentPwd); delete data._parentPwd; }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    state = Object.assign({}, defaultData, data);
+    toast('✅ 从云端恢复成功！');
+    setTimeout(()=>{ location.reload(); }, 800);
+  }catch(e){
+    toast('❌ 恢复失败：'+e.message);
   }
 }
 
@@ -2063,6 +2215,7 @@ function updateBackupInfo(){
     freqEl.value = saved;
     updateBackupStatus();
   }
+  renderTokenSection();
 }
 
 // 页面加载时恢复备份调度
