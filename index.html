@@ -766,10 +766,21 @@
 
     <div class="card" style="background:#E8F5E9;">
       <div class="card-title"><span class="ico">💾</span>数据备份</div>
-      <p style="font-size:12px;color:var(--text-l);margin-bottom:8px;">导出数据到文件永久保存，或从备份文件恢复数据。清空缓存不会丢失。</p>
-      <div style="display:flex;gap:8px;">
-        <button class="btn btn-primary" onclick="exportData()" style="flex:1;">📥 导出备份</button>
-        <button class="btn btn-ghost" onclick="document.getElementById('importFile').click()" style="flex:1;">📤 导入备份</button>
+      <p style="font-size:12px;color:var(--text-l);margin-bottom:8px;">自动备份提醒 + 手动导出，清缓存不丢数据。</p>
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <button class="btn btn-primary" onclick="exportData()" style="flex:1;">📥 立即备份</button>
+        <button class="btn btn-ghost" onclick="document.getElementById('importFile').click()" style="flex:1;">📤 恢复备份</button>
+      </div>
+      <div style="background:#fff;border-radius:10px;padding:10px;font-size:12px;">
+        <div style="font-weight:600;margin-bottom:6px;color:var(--text);">⏰ 自动备份提醒</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <select id="autoBackupFreq" onchange="saveBackupSettings()" style="padding:6px 8px;border:1.5px solid #E0E0E0;border-radius:8px;font-size:12px;">
+            <option value="off">关闭提醒</option>
+            <option value="daily">每天提醒</option>
+            <option value="weekly">每周提醒</option>
+          </select>
+          <span style="color:var(--text-l);font-size:11px;" id="backupStatus"></span>
+        </div>
       </div>
       <input type="file" id="importFile" accept=".json" style="display:none;" onchange="importData(event)">
       <div id="backupInfo" style="font-size:11px;color:var(--text-l);margin-top:6px;"></div>
@@ -1929,7 +1940,6 @@ function changePassword2(){
 function exportData(){
   saveData(); // 先保存最新数据
   const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-  // 同时备份密码
   data._parentPwd = getParentPassword();
   const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
   const url = URL.createObjectURL(blob);
@@ -1940,8 +1950,9 @@ function exportData(){
   a.download = '阳光花园备份_'+ts+'.json';
   a.click();
   URL.revokeObjectURL(url);
-  toast('✅ 数据已导出，请保存好备份文件！');
-  // 更新备份时间提示
+  // 记录备份时间
+  localStorage.setItem('sunshine_last_backup', Date.now().toString());
+  toast('✅ 备份已下载，请保存到手机安全位置！');
   updateBackupInfo();
 }
 
@@ -1976,14 +1987,84 @@ function importData(event){
 function updateBackupInfo(){
   const el = document.getElementById('backupInfo');
   if(!el) return;
-  const s = localStorage.getItem(STORAGE_KEY);
-  if(!s){ el.textContent = ''; return; }
   const tasks = state.tasks?.length || 0;
   const plants = state.plants?.length || 0;
   const moods = (state.moods?.length || 0) + (state.feelings?.length || 0);
   const redeemed = (state.redeemed?.length || 0);
-  el.innerHTML = '当前数据：'+tasks+'个任务 · '+plants+'个植物 · '+moods+'条情绪 · '+redeemed+'条兑换 · ☀️'+state.sun;
+  let info = '当前：'+tasks+'个任务 · '+plants+'个植物 · '+moods+'条情绪 · '+redeemed+'条兑换 · ☀️'+state.sun;
+  const lastBackup = localStorage.getItem('sunshine_last_backup');
+  if(lastBackup){
+    const ago = Math.floor((Date.now() - parseInt(lastBackup)) / 3600000);
+    info += ago < 1 ? ' · 刚刚备份过' : ' · 上次备份'+(ago < 24 ? ago+'小时前' : Math.floor(ago/24)+'天前');
+  }else{
+    info += ' · 尚未备份';
+  }
+  el.innerHTML = info;
+
+  // 恢复备份设置下拉框状态
+  const freqEl = document.getElementById('autoBackupFreq');
+  if(freqEl){
+    const saved = localStorage.getItem('sunshine_backup_freq') || 'off';
+    freqEl.value = saved;
+    updateBackupStatus();
+  }
 }
+
+/* 备份设置管理 */
+function saveBackupSettings(){
+  const freq = document.getElementById('autoBackupFreq').value;
+  localStorage.setItem('sunshine_backup_freq', freq);
+  scheduleBackupReminder(freq);
+  updateBackupStatus();
+  toast(freq === 'off' ? '已关闭自动备份提醒' : '已设置'+(freq==='daily'?'每天':'每周')+'备份提醒');
+}
+
+function updateBackupStatus(){
+  const el = document.getElementById('backupStatus');
+  if(!el) return;
+  const freq = localStorage.getItem('sunshine_backup_freq') || 'off';
+  if(freq === 'off'){ el.textContent = ''; return; }
+  const lastBackup = localStorage.getItem('sunshine_last_backup');
+  if(!lastBackup){ el.textContent = '⚠️ 还没备份过，建议立即备份'; return; }
+  const hours = Math.floor((Date.now() - parseInt(lastBackup)) / 3600000);
+  if(freq === 'daily'){
+    el.textContent = hours >= 24 ? '⚠️ 超过24小时未备份，建议立即备份' : '✅ 今天已备份';
+  }else{
+    el.textContent = hours >= 168 ? '⚠️ 超过7天未备份，建议立即备份' : '✅ 本周已备份';
+  }
+}
+
+/* 自动备份提醒调度 */
+let backupCheckInterval = null;
+function scheduleBackupReminder(freq){
+  if(backupCheckInterval) clearInterval(backupCheckInterval);
+  if(freq === 'off') return;
+  // 每小时检查一次是否需要提醒
+  backupCheckInterval = setInterval(()=>{
+    const lastBackup = localStorage.getItem('sunshine_last_backup');
+    if(!lastBackup){ showBackupNudge(); return; }
+    const hours = Math.floor((Date.now() - parseInt(lastBackup)) / 3600000);
+    if(freq === 'daily' && hours >= 24){ showBackupNudge(); }
+    if(freq === 'weekly' && hours >= 168){ showBackupNudge(); }
+  }, 3600000); // 每小时检查
+}
+
+function showBackupNudge(){
+  // 在页面顶部显示一个不打扰的提醒条
+  const exist = document.getElementById('backupNudge');
+  if(exist) return;
+  const nudge = document.createElement('div');
+  nudge.id = 'backupNudge';
+  nudge.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#FFF3E0;color:#E65100;padding:8px 12px;font-size:12px;text-align:center;z-index:200;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);';
+  nudge.innerHTML = '💾 数据该备份了！<button onclick="exportData();document.getElementById(\'backupNudge\').remove()" style="background:#E65100;color:#fff;border:none;padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;">立即备份</button><span onclick="this.parentElement.remove()" style="cursor:pointer;font-size:16px;">✕</span>';
+  document.body.prepend(nudge);
+}
+
+// 页面加载时恢复备份调度
+(function initBackupScheduler(){
+  const freq = localStorage.getItem('sunshine_backup_freq') || 'off';
+  if(freq !== 'off') scheduleBackupReminder(freq);
+})();
 // 家长端渲染后刷新备份信息
 const origRenderParent = renderParent;
 renderParent = function(){
