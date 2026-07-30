@@ -1,0 +1,15 @@
+{
+  "name": "阳光花园守护计划",
+  "short_name": "阳光花园",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#7ED957",
+  "theme_color": "#7ED957",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png"
+    }
+  ]
+}
