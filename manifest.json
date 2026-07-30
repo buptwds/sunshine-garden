@@ -1,15 +1,42 @@
 {
   "name": "阳光花园守护计划",
   "short_name": "阳光花园",
+  "description": "把作业变成守护花园的冒险，完成任务击退僵尸，赚取阳光种植植物、兑换现实奖励。",
   "start_url": ".",
+  "scope": ".",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#7ED957",
   "theme_color": "#7ED957",
   "icons": [
     {
-      "src": "icon.png",
-      "sizes": "1024x1024",
+      "src": "favicon-32.png",
+      "sizes": "32x32",
       "type": "image/png"
+    },
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
