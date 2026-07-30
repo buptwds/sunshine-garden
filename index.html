@@ -666,6 +666,15 @@
       <button class="btn btn-ghost btn-full" id="btnAddPlant" onclick="openPlantModal()">🌱 种植新植物</button>
     </div>
 
+    <!-- 花园管理：仅家长端可见 -->
+    <div class="card" id="cardGardenMgr" style="background:#FFF3E0;display:none;">
+      <div class="card-title"><span class="ico">🧹</span>花园管理</div>
+      <p style="font-size:12px;color:var(--text-l);margin-bottom:10px;">任务超时僵尸吃光植物后，花园会一团糟。家长可以一键清理所有僵尸，让花园恢复干净。</p>
+      <div id="gardenMgrInfo" style="font-size:12px;margin-bottom:10px;padding:8px 10px;background:#fff;border-radius:8px;color:var(--text-l);"></div>
+      <div id="pendingTaskList" style="margin-bottom:10px;"></div>
+      <button class="btn btn-primary btn-full" onclick="clearAllZombies()" id="btnClearZombies">🧟‍♂️ 一键清理所有僵尸</button>
+    </div>
+
     <div class="card" id="cardRewards">
       <div class="card-title"><span class="ico">🎁</span>阳光兑换站</div>
       <p style="font-size:12px;color:var(--text-l);margin-bottom:8px;" id="rewardHint">用阳光值兑换现实奖励，兑换后让家长兑现～</p>
@@ -766,13 +775,6 @@
       <div class="card-title"><span class="ico">🤝</span>亲子协作任务</div>
       <div id="parentTaskList"></div>
       <button class="btn btn-ghost btn-full" onclick="openParentTaskModal()">➕ 添加亲子任务</button>
-    </div>
-
-    <div class="card" style="background:#FFF3E0;">
-      <div class="card-title"><span class="ico">🧹</span>花园管理</div>
-      <p style="font-size:12px;color:var(--text-l);margin-bottom:10px;">任务超时僵尸吃光植物后，花园会一团糟。家长可以一键清理所有僵尸，让花园恢复干净。</p>
-      <div id="gardenMgrInfo" style="font-size:12px;margin-bottom:10px;padding:8px 10px;background:#fff;border-radius:8px;color:var(--text-l);"></div>
-      <button class="btn btn-primary btn-full" onclick="clearAllZombies()" id="btnClearZombies">🧟‍♂️ 一键清理所有僵尸</button>
     </div>
 
     <div class="card" style="background:#FFF8E1;">
@@ -885,7 +887,14 @@ let state = loadData();
 function loadData(){
   try{
     const s = localStorage.getItem(STORAGE_KEY);
-    if(s){ return Object.assign({}, defaultData, JSON.parse(s)); }
+    if(s){
+      const data = Object.assign({}, defaultData, JSON.parse(s));
+      // 数据迁移：为旧 task 对象补充 pending 字段
+      if(data.tasks){
+        data.tasks.forEach(t => { if(t.pending === undefined) t.pending = false; });
+      }
+      return data;
+    }
   }catch(e){}
   // 预置示例数据
   return {
@@ -932,6 +941,12 @@ function applyRolePermissions(){
   document.querySelectorAll('.task-del').forEach(el => {
     el.style.display = isChild ? 'none' : '';
   });
+
+  // 花园管理卡片：仅家长端显示（在 view-garden 中）
+  const gardenMgrCard = document.getElementById('cardGardenMgr');
+  if(gardenMgrCard){
+    gardenMgrCard.style.display = isChild ? 'none' : '';
+  }
 }
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
 
@@ -1025,7 +1040,14 @@ function renderGarden(){
 
   if(undoneTasks.length > 0){
     warn.classList.add('show');
-    warn.textContent = `⚠️ ${undoneTasks.length}个僵尸入侵中！完成任务击退它们`;
+    const pendingCount = undoneTasks.filter(t=>t.pending).length;
+    if(pendingCount > 0 && pendingCount === undoneTasks.length){
+      warn.textContent = `⏳ ${pendingCount}个任务等待家长确认`;
+    } else if(pendingCount > 0){
+      warn.textContent = `⚠️ ${undoneTasks.length}个僵尸入侵中（${pendingCount}个待确认）`;
+    } else {
+      warn.textContent = `⚠️ ${undoneTasks.length}个僵尸入侵中！完成任务击退它们`;
+    }
   }else{
     warn.classList.remove('show');
   }
@@ -1073,27 +1095,52 @@ function renderGarden(){
     list.innerHTML = '<div class="empty"><div class="e-ico">📝</div>还没有任务，快添加吧～</div>';
   }else{
     list.innerHTML = tasks.map(t => {
-      // 计算倒计时
+      // 计算倒计时（考虑暂停状态）
       const dlMin = t.deadlineMinutes || ZOMBIE_DEFAULT_DEADLINE;
       const totalSec = dlMin * 60;
-      const elapsed = (Date.now() - (t.createdAt||Date.now())) / 1000;
-      const remaining = Math.max(0, Math.round(totalSec - elapsed));
-      const remMin = Math.floor(remaining / 60);
-      const remSec = remaining % 60;
-      const ratio = remaining / totalSec;
+      let elapsed, remaining, remMin, remSec, ratio;
+      if(t.pending && t.pausedElapsed != null){
+        elapsed = t.pausedElapsed;
+      } else {
+        elapsed = (Date.now() - (t.createdAt||Date.now())) / 1000;
+      }
+      remaining = Math.max(0, Math.round(totalSec - elapsed));
+      remMin = Math.floor(remaining / 60);
+      remSec = remaining % 60;
+      ratio = remaining / totalSec;
+
       let cdClass = 'safe';
       if(ratio < 0.1) cdClass = 'urgent';
       else if(ratio < 0.25) cdClass = 'danger';
       else if(ratio < 0.5) cdClass = 'warn';
 
-      const cdHTML = t.done ? '' : `
-        <span class="task-countdown ${cdClass}">⏱️ ${remMin}:${remSec.toString().padStart(2,'0')}</span>`;
+      // 倒计时 HTML：已完成不显示，待确认显示"待确认"，未完成显示倒计时
+      let cdHTML = '';
+      if(t.done){
+        cdHTML = '';
+      } else if(t.pending){
+        cdHTML = `<span class="task-countdown" style="background:#E3F2FD;color:#1565C0;">⏳ 待确认</span>`;
+      } else {
+        cdHTML = `<span class="task-countdown ${cdClass}">⏱️ ${remMin}:${remSec.toString().padStart(2,'0')}</span>`;
+      }
+
+      // checkbox 状态：done=打勾，pending=半选状态
+      let checkClass = '';
+      let checkContent = '';
+      if(t.done){ checkClass = 'done'; checkContent = '✓'; }
+      else if(t.pending){ checkContent = '⏳'; }
+
+      // 任务名样式：done=删除线，pending=蓝色高亮
+      let nameClass = '';
+      let nameStyle = '';
+      if(t.done){ nameClass = 'done'; }
+      else if(t.pending){ nameStyle = 'color:#1565C0;'; }
 
       return `
-      <div class="task-item">
-        <div class="task-check ${t.done?'done':''}" onclick="toggleTask('${t.id}')">${t.done?'✓':''}</div>
+      <div class="task-item" ${t.pending?'style="background:#E3F2FD;"':''}>
+        <div class="task-check ${checkClass}" onclick="toggleTask('${t.id}')">${checkContent}</div>
         <div class="task-info">
-          <div class="task-name ${t.done?'done':''}">${t.name}</div>
+          <div class="task-name ${nameClass}" style="${nameStyle}">${t.name}</div>
           <div class="task-meta">
             <span class="badge badge-green">${t.cat}</span>
             <span class="task-sun">☀️ +${t.sun}</span>
@@ -1128,6 +1175,56 @@ function renderGarden(){
 
   // 种植按钮：仅家长端可见
   if(plantBtn) plantBtn.style.display = isChild ? 'none' : '';
+
+  // 渲染花园管理信息（家长端才显示卡片，但内容始终更新）
+  const undoneTasksMgr = state.tasks.filter(t=>!t.done);
+  const activeZombiesMgr = zombieEntities.filter(z=>!z.defeated);
+  const mgrInfo = document.getElementById('gardenMgrInfo');
+  if(mgrInfo){
+    if(undoneTasksMgr.length === 0){
+      mgrInfo.innerHTML = '✅ 花园当前很安全，没有僵尸入侵。';
+      mgrInfo.style.background = '#E8F5E9';
+    } else {
+      mgrInfo.innerHTML = `⚠️ 当前有 <b style="color:var(--red);">${undoneTasksMgr.length}</b> 个未完成任务，对应 <b style="color:var(--red);">${activeZombiesMgr.length}</b> 个僵尸在花园中。植物剩余 <b>${state.plants.length}</b> 株。`;
+      mgrInfo.style.background = '#FFF3E0';
+    }
+  }
+
+  // 渲染待确认任务列表（家长端显示确认/打回按钮）
+  renderPendingTasks();
+}
+
+/* 渲染待确认任务列表（家长端花园管理卡片中） */
+function renderPendingTasks(){
+  const container = document.getElementById('pendingTaskList');
+  if(!container) return;
+
+  const pendingTasks = state.tasks.filter(t=>t.pending);
+
+  if(pendingTasks.length === 0){
+    container.innerHTML = '';
+    return;
+  }
+
+  container.innerHTML = `
+    <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--orange);">
+      🔔 ${pendingTasks.length} 个任务待确认
+    </div>
+    ${pendingTasks.map(t => `
+      <div style="background:#fff;border-radius:10px;padding:10px;margin-bottom:8px;border-left:3px solid var(--blue);">
+        <div style="font-size:13px;font-weight:600;">${t.name}</div>
+        <div style="font-size:11px;color:var(--text-l);margin-top:2px;">
+          <span class="badge badge-green">${t.cat}</span>
+          <span class="task-sun">☀️ +${t.sun}</span>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:8px;">
+          <button class="btn btn-primary" style="flex:1;padding:6px 8px;font-size:12px;" onclick="confirmTask('${t.id}')">✅ 确认完成</button>
+          <button class="btn btn-ghost" style="flex:1;padding:6px 8px;font-size:12px;border:1.5px solid #E0E0E0;" onclick="rejectTask('${t.id}', false)">⏸️ 打回(继续)</button>
+          <button class="btn btn-ghost" style="flex:1;padding:6px 8px;font-size:12px;border:1.5px solid var(--orange);color:var(--orange);" onclick="rejectTask('${t.id}', true)">🔄 打回(重置)</button>
+        </div>
+      </div>
+    `).join('')}
+  `;
 }
 
 /* 启动战斗循环（僵尸行走+吃植物） */
@@ -1151,7 +1248,17 @@ function updateCountdowns(){
     const cdEl = item.querySelector('.task-countdown');
     if(!cdEl) return;
     const task = state.tasks[i];
-    if(!task || task.done) { cdEl.remove(); return; }
+    if(!task || task.done) { if(cdEl) cdEl.remove(); return; }
+
+    // 待确认状态：显示"待确认"，计时暂停
+    if(task.pending){
+      cdEl.className = 'task-countdown warn';
+      cdEl.textContent = '⏳ 待确认';
+      cdEl.style.background = '#E3F2FD';
+      cdEl.style.color = '#1565C0';
+      return;
+    }
+
     const dlMin = task.deadlineMinutes || ZOMBIE_DEFAULT_DEADLINE;
     const totalSec = dlMin * 60;
     const elapsed = (Date.now() - (task.createdAt||Date.now())) / 1000;
@@ -1164,6 +1271,8 @@ function updateCountdowns(){
     else if(ratio < 0.25) cdClass = 'danger';
     else if(ratio < 0.5) cdClass = 'warn';
     cdEl.className = 'task-countdown ' + cdClass;
+    cdEl.style.background = '';
+    cdEl.style.color = '';
     cdEl.textContent = `⏱️ ${remMin}:${remSec.toString().padStart(2,'0')}`;
   });
 }
@@ -1179,8 +1288,15 @@ function updateZombies(){
   zombieEntities.forEach(z => {
     if(z.defeated) return;
 
-    // 根据任务 deadline 动态计算僵尸速度
     const task = state.tasks.find(t=>t.id===z.taskId);
+
+    // 待确认状态的僵尸：暂停移动，不吃植物
+    if(task && task.pending){
+      renderZombie(z); // 仍然渲染（保持位置不变），但不更新 pos/eatingTimer
+      return;
+    }
+
+    // 根据任务 deadline 动态计算僵尸速度
     const deadlineMin = (task && task.deadlineMinutes) ? task.deadlineMinutes : ZOMBIE_DEFAULT_DEADLINE;
     const created = (task && task.createdAt) ? task.createdAt : now;
     const totalSec = deadlineMin * 60;
@@ -1444,7 +1560,18 @@ function doClearZombies(mode){
     showBattleLog('🧹 家长已清理花园！僵尸和过期任务已清除。');
     toast(`🧹 花园已清理干净！`);
   } else {
-    // dismiss: 仅驱赶，任务保留
+    // dismiss: 仅驱赶，任务保留，但清除 pending 状态
+    undoneTasks.forEach(t => {
+      if(t.pending){
+        t.pending = false;
+        delete t.pendingAt;
+        // 恢复计时（从暂停处继续）
+        if(t.pausedElapsed != null){
+          t.createdAt = Date.now() - (t.pausedElapsed * 1000);
+          delete t.pausedElapsed;
+        }
+      }
+    });
     showBattleLog('🧹 家长已驱赶所有僵尸！记得完成任务哦～');
     toast(`🧹 ${activeZombies.length}个僵尸已被驱赶！`);
   }
@@ -1485,29 +1612,99 @@ function setFilter(c){ currentFilter = c; renderGarden(); }
 function toggleTask(id){
   const t = state.tasks.find(x=>x.id===id);
   if(!t) return;
-  t.done = !t.done;
+
+  // 如果已完成，可以取消完成（扣回阳光）
   if(t.done){
-    state.sun += t.sun;
-    // 找到对应僵尸实体
-    const zombie = zombieEntities.find(z=>z.taskId === id);
-    const taskEl = event && event.target ? event.target.closest('.task-item') : null;
-
-    if(zombie && !zombie.defeated){
-      // 打击效果：阳光炮弹从任务卡片飞向僵尸
-      defeatZombie(zombie, `🎯 「${t.name}」完成！僵尸被击退！`, taskEl);
-    }
-
-    // 阳光飘字
-    flySun(t.sun, taskEl);
-    toast(`🎉 完成「${t.name}」+${t.sun}阳光！`);
-
-    // 检查是否所有任务完成
-    if(state.tasks.every(x=>x.done)){
-      setTimeout(()=>toast('🌟 花园安全了！僵尸被全部击退！'), 900);
-    }
-  }else{
+    t.done = false;
+    t.pending = false;
+    delete t.completedAt;
     state.sun = Math.max(0, state.sun - t.sun);
+    render();
+    return;
   }
+
+  // 如果已处于待确认状态，再次点击 = 取消待确认（孩子可撤回）
+  if(t.pending){
+    t.pending = false;
+    delete t.pendingAt;
+    delete t.pausedElapsed;
+    toast(`已取消「${t.name}」的确认请求，计时继续`);
+    render();
+    return;
+  }
+
+  // 孩子勾选 -> 进入待确认状态
+  // 记录暂停时的已过秒数，用于后续恢复计时
+  const dlMin = t.deadlineMinutes || ZOMBIE_DEFAULT_DEADLINE;
+  const totalSec = dlMin * 60;
+  const elapsed = (Date.now() - (t.createdAt||Date.now())) / 1000;
+  t.pausedElapsed = Math.min(elapsed, totalSec);
+  t.pendingAt = Date.now();
+  t.pending = true;
+
+  toast(`⏳ 「${t.name}」已提交，等待家长确认`);
+  render();
+}
+
+/* 家长确认任务完成 */
+function confirmTask(id){
+  const t = state.tasks.find(x=>x.id===id);
+  if(!t || !t.pending) return;
+
+  // 确认完成
+  t.pending = false;
+  t.done = true;
+  t.completedAt = Date.now();
+  state.sun += t.sun;
+
+  // 找到对应僵尸实体并击败
+  const zombie = zombieEntities.find(z=>z.taskId === id);
+  if(zombie && !zombie.defeated){
+    defeatZombie(zombie, `🎯 「${t.name}」已确认完成！僵尸被击退！`);
+  }
+
+  flySun(t.sun, null);
+  toast(`✅ 已确认「${t.name}」+${t.sun}阳光！`);
+
+  // 检查是否所有任务完成
+  if(state.tasks.length > 0 && state.tasks.every(x=>x.done)){
+    setTimeout(()=>toast('🌟 花园安全了！僵尸被全部击退！'), 900);
+  }
+
+  saveData();
+  render();
+}
+
+/* 家长打回任务 — resetFlag 控制是否重置计时和僵尸位置 */
+function rejectTask(id, resetFlag){
+  const t = state.tasks.find(x=>x.id===id);
+  if(!t || !t.pending) return;
+
+  t.pending = false;
+  delete t.pendingAt;
+
+  if(resetFlag){
+    // 重置计时和僵尸位置
+    t.createdAt = Date.now();
+    delete t.pausedElapsed;
+    // 移除旧僵尸实体，render 时会重新创建从起点出发
+    const oldZombie = zombieEntities.find(z=>z.taskId === t.id);
+    if(oldZombie && oldZombie.el){
+      oldZombie.el.remove();
+    }
+    zombieEntities = zombieEntities.filter(z => z.taskId !== t.id);
+    toast(`🔄 「${t.name}」已打回，计时和僵尸已重置`);
+  } else {
+    // 保留暂停时的进度，从暂停处继续
+    // 调整 createdAt 使 (now - createdAt) == pausedElapsed
+    if(t.pausedElapsed != null){
+      t.createdAt = Date.now() - (t.pausedElapsed * 1000);
+    }
+    delete t.pausedElapsed;
+    toast(`⏸️ 「${t.name}」已打回，从暂停处继续计时`);
+  }
+
+  saveData();
   render();
 }
 
@@ -1554,6 +1751,9 @@ function saveTask(){
   t.deadlineMinutes = newDeadline;
   // 重置任务创建时间，让倒计时和僵尸位置重新开始
   t.createdAt = Date.now();
+  t.pending = false;
+  delete t.pendingAt;
+  delete t.pausedElapsed;
   editingTaskId = null;
   closeModal();
   // 移除旧僵尸实体，render 时会重新创建从起点出发
@@ -1872,20 +2072,6 @@ function renderParent(){
         </div>
         <span class="task-del" onclick="delParentTask('${t.id}')">🗑️</span>
       </div>`).join('');
-
-  // 花园管理信息
-  const undoneTasks = state.tasks.filter(t=>!t.done);
-  const activeZombies = zombieEntities.filter(z=>!z.defeated);
-  const mgrInfo = document.getElementById('gardenMgrInfo');
-  if(mgrInfo){
-    if(undoneTasks.length === 0){
-      mgrInfo.innerHTML = '✅ 花园当前很安全，没有僵尸入侵。';
-      mgrInfo.style.background = '#E8F5E9';
-    } else {
-      mgrInfo.innerHTML = `⚠️ 当前有 <b style="color:var(--red);">${undoneTasks.length}</b> 个未完成任务，对应 <b style="color:var(--red);">${activeZombies.length}</b> 个僵尸在花园中。植物剩余 <b>${state.plants.length}</b> 株。`;
-      mgrInfo.style.background = '#FFF3E0';
-    }
-  }
 }
 
 /* 奖励兑换渲染（孩子端+家长端共用阳光兑换站） */
@@ -2384,7 +2570,7 @@ function addTask(){
   const cat = document.getElementById('tCat').value;
   const sun = parseInt(document.getElementById('tSun').value)||20;
   const deadlineMinutes = parseInt(document.getElementById('tDeadline').value)||30;
-  state.tasks.push({ id:uid(), name, cat, sun, done:false, createdAt:Date.now(), deadlineMinutes });
+  state.tasks.push({ id:uid(), name, cat, sun, done:false, pending:false, createdAt:Date.now(), deadlineMinutes });
   closeModal(); render();
   toast(`任务已添加！${deadlineMinutes}分钟内完成，加油守护花园！`);
 }
