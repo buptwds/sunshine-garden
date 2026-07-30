@@ -768,6 +768,13 @@
       <button class="btn btn-ghost btn-full" onclick="openParentTaskModal()">➕ 添加亲子任务</button>
     </div>
 
+    <div class="card" style="background:#FFF3E0;">
+      <div class="card-title"><span class="ico">🧹</span>花园管理</div>
+      <p style="font-size:12px;color:var(--text-l);margin-bottom:10px;">任务超时僵尸吃光植物后，花园会一团糟。家长可以一键清理所有僵尸，让花园恢复干净。</p>
+      <div id="gardenMgrInfo" style="font-size:12px;margin-bottom:10px;padding:8px 10px;background:#fff;border-radius:8px;color:var(--text-l);"></div>
+      <button class="btn btn-primary btn-full" onclick="clearAllZombies()" id="btnClearZombies">🧟‍♂️ 一键清理所有僵尸</button>
+    </div>
+
     <div class="card" style="background:#FFF8E1;">
       <div class="card-title"><span class="ico">🔐</span>家长密码设置</div>
       <p style="font-size:12px;color:var(--text-l);margin-bottom:8px;">修改切换家长端的密码（默认1234，建议修改为只有家长知道的密码）</p>
@@ -1379,6 +1386,75 @@ function showBattleLog(msg){
   el.classList.add('show');
 }
 
+/* 家长一键清理所有僵尸 */
+function clearAllZombies(){
+  const activeZombies = zombieEntities.filter(z=>!z.defeated);
+  if(activeZombies.length === 0){
+    toast('花园当前没有僵尸，已经很干净了～');
+    return;
+  }
+  openModal(`<h3>🧹 清理花园僵尸</h3>
+    <p style="font-size:13px;color:var(--text-l);margin:10px 0;">当前花园中有 <b style="color:var(--red);font-size:16px;">${activeZombies.length}</b> 个僵尸。</p>
+    <p style="font-size:13px;color:var(--text-l);margin-bottom:6px;">选择清理方式：</p>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <button class="btn btn-primary btn-full" onclick="doClearZombies('dismiss')" style="background:var(--green-d);">🧹 仅驱赶僵尸（保留任务）</button>
+      <p style="font-size:11px;color:var(--text-l);margin:-4px 0 0 4px;">僵尸消失，但未完成的任务仍然保留，孩子可以继续完成。</p>
+      <button class="btn btn-full" onclick="doClearZombies('complete')" style="background:var(--orange);color:#fff;">✅ 标记任务完成 + 驱赶僵尸</button>
+      <p style="font-size:11px;color:var(--text-l);margin:-4px 0 0 4px;">将所有未完成任务标记为已完成（孩子获得阳光），同时驱赶僵尸。</p>
+      <button class="btn btn-ghost btn-full" onclick="doClearZombies('delete')">🗑️ 删除任务 + 驱赶僵尸</button>
+      <p style="font-size:11px;color:var(--text-l);margin:-4px 0 0 4px;">直接删除所有未完成任务（不获得阳光），同时驱赶僵尸。</p>
+    </div>
+    <button class="btn btn-ghost btn-full" onclick="closeModal()" style="margin-top:10px;">取消</button>`);
+}
+
+function doClearZombies(mode){
+  const activeZombies = zombieEntities.filter(z=>!z.defeated);
+  const undoneTasks = state.tasks.filter(t=>!t.done);
+
+  // 逐个击败僵尸（带动画）
+  activeZombies.forEach((z, i) => {
+    setTimeout(()=>{
+      if(z.el){
+        z.el.classList.add('knockback');
+        spawnImpactBurst(z.el);
+      }
+      z.defeated = true;
+      const el = z.el;
+      setTimeout(()=>{ if(el && el.parentNode) el.remove(); }, 650);
+      z.el = null;
+    }, i * 150);
+  });
+
+  // 延迟清理僵尸实体
+  setTimeout(()=>{
+    zombieEntities = zombieEntities.filter(z=>!z.defeated);
+  }, activeZombies.length * 150 + 700);
+
+  // 根据模式处理任务
+  if(mode === 'complete'){
+    undoneTasks.forEach(t => {
+      t.done = true;
+      t.completedAt = Date.now();
+      state.sun += t.sun || 0;
+    });
+    showBattleLog(`🎉 家长已清理花园！${undoneTasks.length}个任务标记完成，获得 ${undoneTasks.reduce((s,t)=>s+(t.sun||0),0)} 阳光！`);
+    toast(`✅ ${undoneTasks.length}个任务已完成，僵尸全部清除！`);
+  } else if(mode === 'delete'){
+    state.tasks = state.tasks.filter(t => t.done);
+    showBattleLog('🧹 家长已清理花园！僵尸和过期任务已清除。');
+    toast(`🧹 花园已清理干净！`);
+  } else {
+    // dismiss: 仅驱赶，任务保留
+    showBattleLog('🧹 家长已驱赶所有僵尸！记得完成任务哦～');
+    toast(`🧹 ${activeZombies.length}个僵尸已被驱赶！`);
+  }
+
+  shakeScene();
+  saveData();
+  closeModal();
+  render();
+}
+
 /* 阳光飘字 + 计数器跳动 */
 function flySun(n, fromEl){
   // 在指定元素位置飞出"+N阳光"
@@ -1796,6 +1872,20 @@ function renderParent(){
         </div>
         <span class="task-del" onclick="delParentTask('${t.id}')">🗑️</span>
       </div>`).join('');
+
+  // 花园管理信息
+  const undoneTasks = state.tasks.filter(t=>!t.done);
+  const activeZombies = zombieEntities.filter(z=>!z.defeated);
+  const mgrInfo = document.getElementById('gardenMgrInfo');
+  if(mgrInfo){
+    if(undoneTasks.length === 0){
+      mgrInfo.innerHTML = '✅ 花园当前很安全，没有僵尸入侵。';
+      mgrInfo.style.background = '#E8F5E9';
+    } else {
+      mgrInfo.innerHTML = `⚠️ 当前有 <b style="color:var(--red);">${undoneTasks.length}</b> 个未完成任务，对应 <b style="color:var(--red);">${activeZombies.length}</b> 个僵尸在花园中。植物剩余 <b>${state.plants.length}</b> 株。`;
+      mgrInfo.style.background = '#FFF3E0';
+    }
+  }
 }
 
 /* 奖励兑换渲染（孩子端+家长端共用阳光兑换站） */
