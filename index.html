@@ -1532,23 +1532,20 @@ function doClearZombies(mode){
   const activeZombies = zombieEntities.filter(z=>!z.defeated);
   const undoneTasks = state.tasks.filter(t=>!t.done);
 
-  // 逐个击败僵尸（带动画）
-  activeZombies.forEach((z, i) => {
-    setTimeout(()=>{
-      if(z.el){
-        z.el.classList.add('knockback');
-        spawnImpactBurst(z.el);
-      }
-      z.defeated = true;
-      const el = z.el;
-      setTimeout(()=>{ if(el && el.parentNode) el.remove(); }, 650);
-      z.el = null;
-    }, i * 150);
+  // 立即清除所有 DOM 中的僵尸元素（带动画）
+  document.querySelectorAll('.zombie').forEach((el, i) => {
+    setTimeout(() => {
+      el.classList.add('knockback');
+      spawnImpactBurst(el);
+      setTimeout(() => { if(el.parentNode) el.remove(); }, 650);
+    }, i * 100);
   });
 
-  // 立即清空 zombieEntities，防止 renderGarden 重建时残留旧实体
-  // 动画期间的 DOM 移除仍由上面 setTimeout 处理
-  activeZombies.forEach(z => { z.defeated = true; });
+  // 立即清空僵尸实体数组（关键：在 render 之前就清空）
+  zombieEntities = [];
+
+  // 逐个击败僵尸实体（动画期间的引用处理）
+  activeZombies.forEach(z => { z.defeated = true; z.el = null; });
 
   // 根据模式处理任务
   if(mode === 'complete'){
@@ -1558,14 +1555,10 @@ function doClearZombies(mode){
       t.completedAt = Date.now();
       state.sun += t.sun || 0;
     });
-    // 任务已完成，不会有新僵尸生成
-    setTimeout(()=>{ zombieEntities = zombieEntities.filter(z=>!z.defeated); }, 800);
     showBattleLog(`🎉 家长已清理花园！${undoneTasks.length}个任务标记完成，获得 ${undoneTasks.reduce((s,t)=>s+(t.sun||0),0)} 阳光！`);
     toast(`✅ ${undoneTasks.length}个任务已完成，僵尸全部清除！`);
   } else if(mode === 'delete'){
     state.tasks = state.tasks.filter(t => t.done);
-    // 任务已删除，不会有新僵尸生成
-    setTimeout(()=>{ zombieEntities = zombieEntities.filter(z=>!z.defeated); }, 800);
     showBattleLog('🧹 家长已清理花园！僵尸和过期任务已清除。');
     toast(`🧹 花园已清理干净！`);
   } else {
@@ -1586,11 +1579,8 @@ function doClearZombies(mode){
     // 10秒后自动清除冷却标记并重建僵尸（模拟"僵尸重新来袭"）
     setTimeout(()=>{
       undoneTasks.forEach(t => { delete dismissedZombies[t.id]; });
-      // 触发 renderGarden 重建僵尸
       render();
     }, 10000);
-    // 立即清空已击败的僵尸实体
-    setTimeout(()=>{ zombieEntities = zombieEntities.filter(z=>!z.defeated); }, 800);
     showBattleLog('🧹 家长已驱赶所有僵尸！10秒后僵尸会重新来袭，记得完成任务哦～');
     toast(`🧹 ${activeZombies.length}个僵尸已被驱赶！10秒后重新来袭`);
   }
