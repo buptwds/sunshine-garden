@@ -1,0 +1,114 @@
+{
+  "role": "parent",
+  "sun": 20,
+  "tasks": [
+    {
+      "id": "ms8gv79pjp8l",
+      "name": "背诵《静夜思》",
+      "cat": "语文",
+      "sun": 20,
+      "done": false,
+      "pending": true,
+      "createdAt": 1785473574541,
+      "deadlineMinutes": 45,
+      "pausedElapsed": 93.73,
+      "pendingAt": 1785473668271
+    },
+    {
+      "id": "ms8gvjegk96j",
+      "name": "做20道口算题",
+      "cat": "数学",
+      "sun": 20,
+      "done": false,
+      "pending": false,
+      "createdAt": 1785473590264,
+      "deadlineMinutes": 60
+    }
+  ],
+  "plants": [
+    "sunflower",
+    "peashooter",
+    "cactus"
+  ],
+  "moods": [],
+  "feelings": [],
+  "wrongs": [
+    {
+      "id": "ms88tnm4vx5z",
+      "subject": "数学",
+      "q": "36 ÷ 6 = ?",
+      "a": "写成了 6，应为 6...实际正确",
+      "fixed": false,
+      "date": 1785373665484
+    }
+  ],
+  "goals": [
+    {
+      "id": "ms88tnm4ivoj",
+      "name": "数学计算速度提高10%",
+      "cur": 40,
+      "target": 100,
+      "unit": "%"
+    },
+    {
+      "id": "ms88tnm4dmzq",
+      "name": "每天阅读30分钟",
+      "cur": 4,
+      "target": 7,
+      "unit": "天"
+    }
+  ],
+  "notes": [
+    {
+      "text": "古诗背诵得很好",
+      "from": "家长",
+      "time": 1785473697545,
+      "sun": 20
+    }
+  ],
+  "rewards": [
+    {
+      "id": "ms88tnm48yx7",
+      "name": "买一本喜欢的书",
+      "icon": "📚",
+      "cost": 100
+    },
+    {
+      "id": "ms88tnm496zt",
+      "name": "周末去公园玩",
+      "icon": "🎢",
+      "cost": 200
+    }
+  ],
+  "parentTasks": [
+    {
+      "id": "ms8gy7w5k2i0",
+      "name": "和孩子一起读一本书",
+      "sun": 40,
+      "done": false,
+      "emoji": "🤝"
+    }
+  ],
+  "pomo": {
+    "mode": "work",
+    "running": false,
+    "remaining": 1500,
+    "todayFocus": 0,
+    "count": 0,
+    "lastDate": "Fri Jul 31 2026"
+  },
+  "tab": "parent",
+  "redeemed": [
+    {
+      "id": "ms8gwyj1m5wt",
+      "name": "看30分钟电视",
+      "icon": "📺",
+      "cost": 50,
+      "time": 1785473656525,
+      "fulfilled": false
+    }
+  ],
+  "_zombieCoreWarned": false,
+  "_parentPwd": "1234",
+  "_backupTime": "2026-07-31T04:57:26.889Z"
+}
