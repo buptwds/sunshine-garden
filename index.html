@@ -1765,7 +1765,10 @@ function saveTask(){
   delete t.pausedElapsed;
   editingTaskId = null;
   closeModal();
-  // 移除旧僵尸实体，render 时会重新创建从起点出发
+  // 移除旧僵尸实体及其 DOM 元素
+  zombieEntities.forEach(z => {
+    if(z.taskId === t.id && z.el && z.el.parentNode) z.el.remove();
+  });
   zombieEntities = zombieEntities.filter(z => z.taskId !== t.id);
   render();
   toast(`✅ 已更新 · 时限 ${newDeadline} 分钟 · 僵尸已重置`);
